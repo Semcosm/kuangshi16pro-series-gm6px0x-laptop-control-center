@@ -1,0 +1,5 @@
+﻿C:\Users\25769\AppData\Local\Packages\ControlCenter3_wrbgcf7aesyd8\LocalCache
+C:\Users\25769\AppData\Local\Packages\ControlCenter3_wrbgcf7aesyd8\LocalState
+C:\Users\25769\AppData\Local\Packages\ControlCenter3_wrbgcf7aesyd8\RoamingState
+C:\Users\25769\AppData\Local\Packages\ControlCenter3_wrbgcf7aesyd8\Settings
+C:\Users\25769\AppData\Local\Packages\ControlCenter3_wrbgcf7aesyd8\TempState
