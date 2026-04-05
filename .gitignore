@@ -1,0 +1,16 @@
+.codex
+__pycache__/
+
+amw0-logs/
+ec-probe-logs/
+
+windows-control-center/appxsym/
+windows-control-center/extracted/
+windows-control-center/msix/
+windows-control-center/msix-x64/
+windows-control-center/cc-capture-*/
+
+*.monitor.txt
+
+acpi-scan/
+windows-control-center/*.zip
