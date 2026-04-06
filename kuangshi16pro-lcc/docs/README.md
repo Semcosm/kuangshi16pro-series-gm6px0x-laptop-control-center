@@ -22,7 +22,7 @@ Start here:
 - `source-map.md`
   which repository files are still worth reading, and what each one is for
 - `roadmap.md`
-  current build order and reverse-engineering priorities
+  current build order, reverse-engineering priorities, and PR status check
 - `ci.md`
   GitHub Actions checks and the protected-branch required-check list
 

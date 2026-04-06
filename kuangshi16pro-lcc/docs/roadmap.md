@@ -2,6 +2,22 @@
 
 This roadmap keeps the Linux implementation aligned with the `GCUService` reverse engineering work.
 
+## Current Status Check
+
+- PR1 completed
+- PR2 completed
+- PR3 completed, with the current minimal stable surface limited to `Manager`,
+  `Fan`, and `Power`; there is no standalone `Thermal` XML in the stable API
+- PR4 completed
+- PR5 completed
+- PR6 completed
+- PR7 completed
+- PR8 completed, with product commands fully clientized over D-Bus while
+  developer commands still keep a direct path
+- PR9 completed in repository code and workflow definitions; GitHub-side branch
+  protection and required-check configuration still need final manual
+  confirmation in the repository settings
+
 ## Main Goal
 
 Reproduce the `GCUService.exe` service layer on Linux:
