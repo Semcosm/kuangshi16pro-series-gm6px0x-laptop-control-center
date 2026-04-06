@@ -1,6 +1,7 @@
 #ifndef LCC_BACKENDS_BACKEND_H
 #define LCC_BACKENDS_BACKEND_H
 
+#include "backends/amw0/transport.h"
 #include "lcc/backend.h"
 
 typedef struct {
@@ -38,7 +39,22 @@ lcc_status_t lcc_standard_backend_init_at_root(lcc_standard_backend_t *standard,
                                                lcc_backend_t *backend,
                                                const char *root);
 
+typedef struct {
+  amw0_backend_t transport;
+  char ecrr_path[64];
+  bool has_ecrr_path;
+  amw0_route_t route;
+  lcc_state_snapshot_t shadow_state;
+} lcc_amw0_backend_t;
+
+lcc_status_t lcc_amw0_backend_init(lcc_amw0_backend_t *amw0,
+                                   lcc_backend_t *backend,
+                                   const char *call_node,
+                                   const char *ecrr_path,
+                                   bool dry_run);
+
 extern const lcc_backend_ops_t lcc_mock_backend_ops;
 extern const lcc_backend_ops_t lcc_standard_backend_ops;
+extern const lcc_backend_ops_t lcc_amw0_backend_ops;
 
 #endif

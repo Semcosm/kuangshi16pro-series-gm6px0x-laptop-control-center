@@ -61,6 +61,25 @@ static bool amw0_reply_looks_numeric(const char *reply) {
   return true;
 }
 
+static void amw0_trace_io(amw0_backend_t *backend, const char *expr,
+                          const char *reply) {
+  FILE *stream = NULL;
+
+  if (backend == NULL || !backend->trace_enabled ||
+      backend->trace_file[0] == '\0') {
+    return;
+  }
+
+  stream = fopen(backend->trace_file, "a");
+  if (stream == NULL) {
+    return;
+  }
+
+  (void)fprintf(stream, "expr=%s\nreply=%s\n\n", expr != NULL ? expr : "",
+                reply != NULL ? reply : "");
+  (void)fclose(stream);
+}
+
 lcc_status_t amw0_backend_init(amw0_backend_t *backend, const char *call_node,
                                bool dry_run) {
   int written = 0;
@@ -76,7 +95,27 @@ lcc_status_t amw0_backend_init(amw0_backend_t *backend, const char *call_node,
     return LCC_ERR_BUFFER_TOO_SMALL;
   }
 
+  backend->trace_file[0] = '\0';
   backend->dry_run = dry_run;
+  backend->trace_enabled = false;
+  return LCC_OK;
+}
+
+lcc_status_t amw0_backend_set_trace(amw0_backend_t *backend,
+                                    const char *trace_file) {
+  int written = 0;
+
+  if (backend == NULL || trace_file == NULL || trace_file[0] == '\0') {
+    return LCC_ERR_INVALID_ARGUMENT;
+  }
+
+  written = snprintf(backend->trace_file, sizeof(backend->trace_file), "%s",
+                     trace_file);
+  if (written < 0 || (size_t)written >= sizeof(backend->trace_file)) {
+    return LCC_ERR_BUFFER_TOO_SMALL;
+  }
+
+  backend->trace_enabled = true;
   return LCC_OK;
 }
 
@@ -94,6 +133,7 @@ lcc_status_t amw0_backend_eval(amw0_backend_t *backend, const char *expr,
     if (written < 0 || (size_t)written >= reply_len) {
       return LCC_ERR_BUFFER_TOO_SMALL;
     }
+    amw0_trace_io(backend, expr, reply);
     return LCC_OK;
   }
 
@@ -131,6 +171,7 @@ lcc_status_t amw0_backend_eval(amw0_backend_t *backend, const char *expr,
     return map_errno(errno);
   }
 
+  amw0_trace_io(backend, expr, reply);
   return LCC_OK;
 }
 
@@ -146,6 +187,35 @@ lcc_status_t amw0_backend_send_packet(amw0_backend_t *backend,
   }
 
   return amw0_backend_eval(backend, expr, reply, reply_len);
+}
+
+lcc_status_t amw0_backend_send_wkbc(amw0_backend_t *backend,
+                                    amw0_route_t route, uint8_t sa00,
+                                    uint8_t sa01, uint8_t sa02, uint8_t sa03,
+                                    char *reply, size_t reply_len) {
+  amw0_packet_t packet;
+
+  if (backend == NULL) {
+    return LCC_ERR_INVALID_ARGUMENT;
+  }
+
+  memset(&packet, 0, sizeof(packet));
+  packet.slot = 0u;
+  packet.sac1 = (uint16_t)route;
+  packet.sa[0] = sa00;
+  packet.sa[1] = sa01;
+  packet.sa[2] = sa02;
+  packet.sa[3] = sa03;
+  return amw0_backend_send_packet(backend, &packet, reply, reply_len);
+}
+
+lcc_status_t amw0_backend_send_ec_write(amw0_backend_t *backend,
+                                        amw0_route_t route, uint16_t offset,
+                                        uint8_t value, char *reply,
+                                        size_t reply_len) {
+  return amw0_backend_send_wkbc(backend, route, (uint8_t)(offset & 0xffu),
+                                (uint8_t)((offset >> 8) & 0xffu), value, 0u,
+                                reply, reply_len);
 }
 
 lcc_status_t amw0_backend_read_wqac(amw0_backend_t *backend, uint8_t index,

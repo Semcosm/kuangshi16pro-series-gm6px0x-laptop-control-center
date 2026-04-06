@@ -41,6 +41,31 @@ static lcc_status_t read_ecrr_value(amw0_backend_t *backend,
   return parse_u32_reply(reply, value);
 }
 
+lcc_status_t lcc_amw0_read_ecrr_u32(amw0_backend_t *backend,
+                                    const char *ecrr_path, uint16_t offset,
+                                    uint32_t *value) {
+  return read_ecrr_value(backend, ecrr_path, offset, value);
+}
+
+lcc_status_t lcc_amw0_read_ecrr_u8(amw0_backend_t *backend,
+                                   const char *ecrr_path, uint16_t offset,
+                                   uint8_t *value) {
+  uint32_t raw = 0;
+  lcc_status_t status = LCC_OK;
+
+  if (value == NULL) {
+    return LCC_ERR_INVALID_ARGUMENT;
+  }
+
+  status = read_ecrr_value(backend, ecrr_path, offset, &raw);
+  if (status != LCC_OK) {
+    return status;
+  }
+
+  *value = (uint8_t)(raw & 0xffu);
+  return LCC_OK;
+}
+
 lcc_status_t lcc_amw0_print_mode_decode(amw0_backend_t *backend,
                                         const char *ecrr_path) {
   uint32_t mafan_ctl = 0;

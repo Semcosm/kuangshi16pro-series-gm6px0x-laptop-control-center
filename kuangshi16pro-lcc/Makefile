@@ -23,6 +23,11 @@ COMMON_SRCS := \
 	$(SRC_DIR)/common/lcc_error.c \
 	$(SRC_DIR)/common/lcc_log.c \
 	$(SRC_DIR)/backends/backend.c \
+	$(SRC_DIR)/backends/amw0/backend.c \
+	$(SRC_DIR)/backends/amw0/transport.c \
+	$(SRC_DIR)/backends/amw0/wmbc-pack.c \
+	$(SRC_DIR)/backends/amw0/ec-addr-map.c \
+	$(SRC_DIR)/backends/amw0/ecmg.c \
 	$(SRC_DIR)/backends/standard/backend.c \
 	$(SRC_DIR)/backends/standard/hwmon.c \
 	$(SRC_DIR)/backends/standard/thermal.c \
@@ -31,10 +36,6 @@ COMMON_SRCS := \
 
 APP_SRCS := \
 	$(COMMON_SRCS) \
-	$(SRC_DIR)/backends/amw0/transport.c \
-	$(SRC_DIR)/backends/amw0/wmbc-pack.c \
-	$(SRC_DIR)/backends/amw0/ec-addr-map.c \
-	$(SRC_DIR)/backends/amw0/ecmg.c \
 	$(SRC_DIR)/core/profile/plan.c \
 	$(SRC_DIR)/core/profile/mode-profile.c \
 	$(SRC_DIR)/core/profile/loader.c \
@@ -70,8 +71,6 @@ DAEMON_SRCS := \
 TEST_SRCS := \
 	$(COMMON_SRCS) \
 	$(SRC_DIR)/backends/mock/mock-backend.c \
-	$(SRC_DIR)/backends/amw0/transport.c \
-	$(SRC_DIR)/backends/amw0/wmbc-pack.c \
 	$(SRC_DIR)/core/capabilities/detect.c \
 	$(SRC_DIR)/core/capabilities/model-map.c \
 	$(SRC_DIR)/core/profile/plan.c \
@@ -85,6 +84,7 @@ TEST_SRCS := \
 	$(SRC_DIR)/core/state/reader.c \
 	$(SRC_DIR)/daemon/manager.c \
 	$(SRC_DIR)/daemon/transaction.c \
+	$(TEST_DIR)/unit/test_backend_amw0.c \
 	$(TEST_DIR)/unit/test_backend_standard.c \
 	$(TEST_DIR)/unit/test_backend_mock.c \
 	$(TEST_DIR)/unit/test_profiles.c \

@@ -64,3 +64,16 @@ This is the byte order the Linux backend must preserve.
 - `scripts/amw0/amw0-scmd-scan.sh`
 
 These scripts are the practical reference for the first Linux backend implementation.
+
+## Daemon Hook
+
+The first executable daemon path keeps AMW0 behind the backend interface.
+
+- force AMW0 selection with `LCC_BACKEND=amw0`
+- override the transport node with `LCC_AMW0_CALL_NODE=/proc/acpi/call`
+- override the read helper path with `LCC_AMW0_ECRR_PATH=\_SB.INOU.ECRR`
+- use `LCC_AMW0_DRY_RUN=1` to exercise the transaction path without writing hardware
+- use `LCC_AMW0_TRACE_FILE=/tmp/lccd-amw0.trace` to capture internal `WMBC(..., 0x04, ...)` traffic
+
+This is the intended hook for one live-path smoke test while the backend is still limited
+to mode and power writes.
