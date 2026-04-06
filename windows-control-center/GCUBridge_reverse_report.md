@@ -129,7 +129,115 @@ UI / Tray / OSD / Service
 
 前端包和传统后台服务之间，往往需要额外处理网络隔离与本地通信权限。
 
-## 七、它还具备“按当前登录用户拉起进程”的能力
+## 七、现在已经能确认的 broker 细节
+
+这轮继续反编译后，broker 行为已经不只是“像 MQTT”，而是实现边界明确了：
+
+- 监听端口固定为 `13688`
+- 使用 `MQTTnet` 创建 server
+- 本地连接 `[::1]` / `127.0.0.1` 会走 `LocalHostNetwork(...)`
+- 非 localhost 连接会走 `OutofLocalHostNetwork(...)`
+
+本地认证不是匿名的，而是显式的 `clientId -> username -> password` 白名单。
+
+它会为这些客户端族批量生成账号：
+
+- `UWPClient*`
+- `MyKeyboard*`
+- `MyTray*`
+- `PluginClient*`
+
+同时还硬编码了若干固定客户端：
+
+- `MyControlCenter` -> `MyControlCenterUser`
+- `MyTPDetector` -> `MyTPDetectorUser`
+- `MyDynamicDesktop` -> `MyDynamicDesktopUser`
+- `OcTool` -> `OcToolUser`
+- `OcScanner` -> `OcScannerUser`
+- `OpenCL` -> `OpenCLUser`
+
+所以这已经不是“本地谁都能连”的松散总线，而是有明确身份池的内部 broker。
+
+## 八、它会保活并拉起 `GCUService.exe`
+
+`TimerService` 进一步坐实了部署关系：
+
+- 服务启动时先启动本地 MQTT server
+- 然后确保 `MyControlCenter\\GCUService` 被拉起
+- 如果目标进程消失，会再拉起
+- 如果检测到目标进程重复异常，还会重启 MQTT service
+
+它还会在用户登录时向 `Languages/Control` 发布：
+
+- `{ Action = "EnableTray" }`
+
+也就是说，broker/service 层还承担了“让 tray/UI 跟着用户会话起来”的协调职责。
+
+## 九、broker 内部直接处理的特殊 topic
+
+继续看 `MqttServer_ApplicationMessageReceived(...)`，目前已经确认有几类消息
+会在 broker 内部直接消费，而不是纯路由：
+
+- `Service/SetPassword`
+- `Service/FWBuffer`
+- `Service/SetExitCommand`
+
+其中：
+
+- `Service/SetPassword`
+  会更新 out-of-network 用户名/密码，并写入 `service.ini`
+- `Service/FWBuffer`
+  会直接调用 `NvramVariable.SetFwVarsBuf(...)`
+
+这意味着 `GCUBridge.exe` 自己也掌握一条 NVRAM buffer 更新旁路。
+
+## 十、NVRAM 旁路的具体写法
+
+`GCUBridge.exe` 里内置的 `NvramVariableVClass.NvramVariable` 没有被糊掉，
+所以 UEFI buffer 写法已经能直接看到：
+
+1. `ReadUefi(0, NVRAM_STRUCT_SIZE)`
+2. 按字段修改 `NVRAM_STRUCT`
+3. marshal 整个 struct 为 byte[]
+4. `WriteUefi(0, NVRAM_STRUCT_SIZE, array)`
+
+当前 bridge 侧可见的可写字段包括：
+
+- byte:
+  `PowerMode`、`MemoryOverClockSwitch`、`ApExistFlag`、`OverClockRecoveryFlag`、
+  `ACRecoveryStatus`、`ApUseFlag`、`OemDisplayMode`、`FnKeyStatus`
+- `ushort`:
+  `ICpuCoreVoltageValue`、`ICpuCoreVoltageOffsetValue`、
+  `ICpuCoreVoltageOffsetNegativeValue`、`ICpuTauValue`
+- `uint`:
+  `ACpuFreqValue`、`ACpuVoltageValue`
+- byte arrays:
+  `RGBKeyboard08`、`RGBKeyboard1A`、`SmartLightbar08`、`SmartLightbar1A`
+
+这再次说明：
+
+- 主 UEFI 路径是固定 struct 的整块读改写
+- 这条路径偏向平台配置、OC、灯效、显示/Fn 等持久化设置
+- 仍没有看到明确的 dGPU / MUX / direct-connect 字段
+
+## 十一、和 Linux 设计的关系
+
+现在可以把 Windows 总线层再拆细一点：
+
+1. `GCUBridge.exe`
+   本地 broker、认证、保活、少量特殊 topic 处理
+2. `SystrayComponent.exe`
+   轻量 tray client，发 `Fan/Control` 的业务动作
+3. `GCUService.exe`
+   主要业务编排和硬件访问层
+
+这进一步说明 Linux 版没必要优先复刻 `GCUBridge`。
+更现实的路线仍然是：
+
+- 自己做一个本地 service / CLI
+- 直接复刻 `GCUService` 的业务语义
+- 直连 Linux 侧 ACPI / EC / firmware backend
+## 十二、它还具备“按当前登录用户拉起进程”的能力
 
 字符串里有：
 
@@ -147,7 +255,7 @@ UI / Tray / OSD / Service
 
 这和你前面抓到的“托盘层/桥接层/前端层分离”也能对上。
 
-## 八、它不是硬件控制最终落点
+## 十三、它不是硬件控制最终落点
 
 到目前为止，`GCUBridge.exe` 的字符串更像：
 
@@ -169,7 +277,7 @@ UI / Tray / OSD / Service
 
 这些核心硬件语义，前面主要出现在 `GCUService.exe` 里。
 
-## 九、对 Linux 版控制台的意义
+## 十四、对 Linux 版控制台的意义
 
 这基本把架构拆成两层了：
 
@@ -198,7 +306,7 @@ UI / Tray / OSD / Service
 
 除非你后面想做“兼容 Windows 协议”的完整替代品，才需要认真复刻 `GCUBridge` 这一层。
 
-## 十、下一步最值得做的事
+## 十五、下一步最值得做的事
 
 1. 继续反编译 `GCUBridge.exe`
    - 看 `MqttServerPort` 的真正取值来源

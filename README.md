@@ -5,7 +5,8 @@ Linux reverse-engineering workspace for the Mechrevo Kuangshi16Pro Series `GM6PX
 This repository focuses on three things:
 
 - reverse engineering the ACPI/WMI transport exposed by `AMW0`
-- identifying the real dual-fan control path used by the vendor control center
+- identifying the real dual-fan control path used by the vendor control center,
+  with `GCUService.exe` as the current Windows-side priority
 - building a Linux-side control-center-grade toolchain for this machine
 
 ## Current Scope
@@ -16,6 +17,11 @@ This repository focuses on three things:
 - Windows package reverse engineering is documented in:
   - `windows-control-center-analysis.md`
   - `windows-control-center/`
+  - `windows-control-center/GCUService_reverse_report.md`
+- Linux implementation work should go under:
+  - `linux-control-center/`
+  - `linux-control-center/docs/`
+  - `linux-control-center/fixtures/`
 - legacy NBFC-compatible experiments are kept only as historical reference in:
   - `legacy-nbfc-configs/`
 
@@ -31,6 +37,8 @@ The top-level tools are grouped by transport or source:
   ACPI table collection helpers
 - `windows-control-center/*`
   vendor Windows package artifacts and capture helpers
+- `linux-control-center/*`
+  Linux control-center source tree
 
 This naming is intentional and currently consistent enough for a Git repository.
 The only old `nbfc` naming was moved into `legacy-nbfc-configs/`.
@@ -47,6 +55,18 @@ The only old `nbfc` naming was moved into `legacy-nbfc-configs/`.
   trace a single `WMBC(..., 0x04, ...)` send
 - `windows-control-center/windows-cc-capture.ps1`
   no-install Windows-side capture helper
+- `windows-control-center/GCUService_reverse_report.md`
+  current highest-value Windows reverse target
+- `linux-control-center/docs/README.md`
+  curated Linux implementation doc index
+- `linux-control-center/docs/implementation-model.md`
+  Linux-side object model and feature split
+- `linux-control-center/docs/amw0-backend.md`
+  low-level AMW0 backend facts that are already proven
+- `linux-control-center/build/lccctl`
+  first C-based Linux CLI skeleton after `make -C linux-control-center`
+- `linux-control-center/fixtures/demo-profile.ini`
+  sample config for staged `profile apply`
 
 ## Notes
 

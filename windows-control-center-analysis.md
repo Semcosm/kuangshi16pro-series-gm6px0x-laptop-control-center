@@ -189,22 +189,30 @@ This note records the static findings from the Mechrevo Control Center package:
 
 ## Highest-Value Next Steps
 
-1. On Windows, capture local message traffic while changing:
+1. Decompile `windows-control-center/GCUService.exe` and recover the full call paths for:
+   - `SetFanTableThread`
+   - `SetEcFanTable*`
+   - `SetOperatingModeProfileIndexThread`
+   - `SetModeSwitchChangeThread`
+   - `ReadACPI` / `WriteACPI`
+   - `WMIReadECRAM` / `WMIWriteECRAM`
+
+2. On Windows, capture local message traffic while changing:
    - fan mode
    - fan boost
    - custom fan curve
    - CPU fan and GPU fan sliders, if present
 
-2. Identify the actual local broker or app-service transport details:
+3. Identify the actual local broker or app-service transport details:
    - process that owns the broker
    - TCP port or named transport
    - topic payload format for `Fan/Control`
 
-3. On Windows, watch file and registry access while the fan page opens:
+4. On Windows, watch file and registry access while the fan page opens:
    - which `UserFanTables/<model>/...` file is read
    - whether `GM6PX0X` is translated to `PH6PGEx`, `PH6PG7x`, or another family
 
-4. Find the final privileged hop:
+5. Find the final privileged hop:
    - a vendor service
    - a kernel driver
    - an ACPI or WMI bridge
