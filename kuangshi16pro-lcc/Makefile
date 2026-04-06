@@ -22,7 +22,12 @@ TEST_BIN := $(BUILD_DIR)/test_kuangshi16pro_lcc
 COMMON_SRCS := \
 	$(SRC_DIR)/common/lcc_error.c \
 	$(SRC_DIR)/common/lcc_log.c \
-	$(SRC_DIR)/backends/backend.c
+	$(SRC_DIR)/backends/backend.c \
+	$(SRC_DIR)/backends/standard/backend.c \
+	$(SRC_DIR)/backends/standard/hwmon.c \
+	$(SRC_DIR)/backends/standard/thermal.c \
+	$(SRC_DIR)/backends/standard/platform_profile.c \
+	$(SRC_DIR)/backends/standard/powercap.c
 
 APP_SRCS := \
 	$(COMMON_SRCS) \
@@ -80,6 +85,7 @@ TEST_SRCS := \
 	$(SRC_DIR)/core/state/reader.c \
 	$(SRC_DIR)/daemon/manager.c \
 	$(SRC_DIR)/daemon/transaction.c \
+	$(TEST_DIR)/unit/test_backend_standard.c \
 	$(TEST_DIR)/unit/test_backend_mock.c \
 	$(TEST_DIR)/unit/test_profiles.c \
 	$(TEST_DIR)/unit/test_manager.c \

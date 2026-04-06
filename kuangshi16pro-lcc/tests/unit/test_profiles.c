@@ -5,6 +5,7 @@
 #include "lcc/profile.h"
 
 void lcc_run_backend_mock_tests(void);
+void lcc_run_backend_standard_tests(void);
 void lcc_run_manager_tests(void);
 void lcc_run_transaction_tests(void);
 
@@ -101,6 +102,7 @@ int main(void) {
   test_amw0_expr_format();
   test_profile_document_load();
   lcc_run_backend_mock_tests();
+  lcc_run_backend_standard_tests();
   lcc_run_manager_tests();
   lcc_run_transaction_tests();
   return 0;

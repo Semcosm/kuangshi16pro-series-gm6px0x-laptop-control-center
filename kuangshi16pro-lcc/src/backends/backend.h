@@ -24,6 +24,21 @@ void lcc_mock_backend_fail_next_power(lcc_mock_backend_t *mock,
 void lcc_mock_backend_fail_next_fan(lcc_mock_backend_t *mock,
                                     lcc_status_t status);
 
+typedef struct {
+  char root[256];
+  char hwmon_dir[256];
+  char thermal_dir[256];
+  char platform_profile_path[256];
+  char powercap_dir[256];
+} lcc_standard_backend_t;
+
+lcc_status_t lcc_standard_backend_init(lcc_standard_backend_t *standard,
+                                       lcc_backend_t *backend);
+lcc_status_t lcc_standard_backend_init_at_root(lcc_standard_backend_t *standard,
+                                               lcc_backend_t *backend,
+                                               const char *root);
+
 extern const lcc_backend_ops_t lcc_mock_backend_ops;
+extern const lcc_backend_ops_t lcc_standard_backend_ops;
 
 #endif
