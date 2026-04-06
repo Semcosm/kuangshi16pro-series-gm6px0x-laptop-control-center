@@ -1,15 +1,22 @@
-# Implementation Model
+# Profiles And State
 
 This note records the current Linux-facing model distilled from `GCUService`.
 
-## Service Split
+## Architecture Split
 
 The first Linux implementation should be split into:
 
-- `backend-amw0`
-  Owns `WMBC` / `WKBC` / `SCMD` packing and hardware writes.
-- `profile-service`
-  Owns operating mode, profile selection, fan-table choice, and power-limit orchestration.
+- `backends/standard`
+  Owns standard Linux ABI reads and writes such as `hwmon`, `thermal`,
+  `powercap`, and `platform_profile`.
+- `backends/amw0`
+  Owns `WMBC` / `WKBC` / `SCMD` packing and vendor-specific hardware writes.
+- `core/profile`
+  Owns operating mode, profile selection, and profile-document validation.
+- `core/fan`
+  Owns fan-table validation and staged fan-programming plans.
+- `core/power`
+  Owns power-limit objects and staged PL/TCC plans.
 - `state-reader`
   Owns temperatures, fan RPM, current mode, and error-state reads.
 - `ui`
@@ -269,7 +276,7 @@ For Linux this means the backend should keep:
 
 - a structured `smart_apc_table` type
 - a generic `acpi_eval_method(name, payload)` abstraction for future native paths
-- `backend-amw0` as one transport option, not the only architectural model
+- `backends/amw0` as one transport option, not the only architectural model
 
 The UEFI side is also clearer:
 

@@ -1,0 +1,12 @@
+[Unit]
+Description=Kuangshi16Pro Linux Control Center daemon
+Documentation=man:lccd(8)
+
+[Service]
+Type=dbus
+BusName=io.github.semcosm.Lcc1
+ExecStart=/usr/lib/kuangshi16pro-lcc/lccd
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

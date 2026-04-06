@@ -21,7 +21,8 @@ This repository focuses on three things:
 - Linux implementation work should go under:
   - `kuangshi16pro-lcc/`
   - `kuangshi16pro-lcc/docs/`
-  - `kuangshi16pro-lcc/fixtures/`
+  - `kuangshi16pro-lcc/data/`
+  - `kuangshi16pro-lcc/tests/fixtures/`
 - legacy NBFC-compatible experiments are kept only as historical reference in:
   - `legacy-nbfc-configs/`
 
@@ -59,13 +60,15 @@ The only old `nbfc` naming was moved into `legacy-nbfc-configs/`.
   current highest-value Windows reverse target
 - `kuangshi16pro-lcc/docs/README.md`
   curated Linux implementation doc index
-- `kuangshi16pro-lcc/docs/implementation-model.md`
-  Linux-side object model and feature split
-- `kuangshi16pro-lcc/docs/amw0-backend.md`
+- `kuangshi16pro-lcc/docs/architecture.md`
+  Linux-native daemon, D-Bus, and backend split
+- `kuangshi16pro-lcc/docs/profiles.md`
+  Linux-side mode/profile/fan/power object model
+- `kuangshi16pro-lcc/docs/backend-amw0.md`
   low-level AMW0 backend facts that are already proven
 - `kuangshi16pro-lcc/build/lccctl`
   first C-based Linux CLI skeleton after `make -C kuangshi16pro-lcc`
-- `kuangshi16pro-lcc/fixtures/demo-profile.ini`
+- `kuangshi16pro-lcc/tests/fixtures/demo-profile.ini`
   sample config for staged `profile apply`
 
 ## Notes

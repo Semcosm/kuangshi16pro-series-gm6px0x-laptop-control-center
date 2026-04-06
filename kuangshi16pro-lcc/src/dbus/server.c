@@ -1,0 +1,218 @@
+#include "dbus/server.h"
+
+#include <errno.h>
+#include <stdio.h>
+#include <systemd/sd-bus.h>
+
+#include "common/lcc_log.h"
+#include "daemon/errors.h"
+
+static const char *const lcc_bus_name = "io.github.semcosm.Lcc1";
+static const char *const lcc_object_path = "/io/github/semcosm/Lcc1";
+
+static int method_get_capabilities(sd_bus_message *message, void *userdata,
+                                   sd_bus_error *ret_error) {
+  const lcc_manager_t *manager = userdata;
+
+  (void)ret_error;
+  return sd_bus_reply_method_return(message, "s",
+                                    lcc_manager_capabilities_json(manager));
+}
+
+static int method_get_state(sd_bus_message *message, void *userdata,
+                            sd_bus_error *ret_error) {
+  const lcc_manager_t *manager = userdata;
+  char payload[LCC_MANAGER_JSON_MAX];
+  const lcc_status_t status =
+      lcc_manager_get_state_json(manager, payload, sizeof(payload));
+
+  if (status != LCC_OK) {
+    return lcc_dbus_error_set(ret_error, status);
+  }
+
+  return sd_bus_reply_method_return(message, "s", payload);
+}
+
+static int method_get_thermal_state(sd_bus_message *message, void *userdata,
+                                    sd_bus_error *ret_error) {
+  const lcc_manager_t *manager = userdata;
+  char payload[LCC_MANAGER_JSON_MAX];
+  const lcc_status_t status =
+      lcc_manager_get_thermal_json(manager, payload, sizeof(payload));
+
+  if (status != LCC_OK) {
+    return lcc_dbus_error_set(ret_error, status);
+  }
+
+  return sd_bus_reply_method_return(message, "s", payload);
+}
+
+static int method_set_profile(sd_bus_message *message, void *userdata,
+                              sd_bus_error *ret_error) {
+  lcc_manager_t *manager = userdata;
+  const char *profile_name = NULL;
+  lcc_status_t status = LCC_OK;
+  const int r = sd_bus_message_read(message, "s", &profile_name);
+
+  if (r < 0) {
+    return r;
+  }
+
+  status = lcc_manager_set_profile(manager, profile_name);
+  if (status != LCC_OK) {
+    return lcc_dbus_error_set(ret_error, status);
+  }
+
+  return sd_bus_reply_method_return(message, "");
+}
+
+static int method_apply_fan_table(sd_bus_message *message, void *userdata,
+                                  sd_bus_error *ret_error) {
+  lcc_manager_t *manager = userdata;
+  const char *table_name = NULL;
+  lcc_status_t status = LCC_OK;
+  const int r = sd_bus_message_read(message, "s", &table_name);
+
+  if (r < 0) {
+    return r;
+  }
+
+  status = lcc_manager_apply_fan_table(manager, table_name);
+  if (status != LCC_OK) {
+    return lcc_dbus_error_set(ret_error, status);
+  }
+
+  return sd_bus_reply_method_return(message, "");
+}
+
+static int method_set_power_limits(sd_bus_message *message, void *userdata,
+                                   sd_bus_error *ret_error) {
+  lcc_manager_t *manager = userdata;
+  uint8_t pl1 = 0;
+  uint8_t pl2 = 0;
+  uint8_t pl4 = 0;
+  uint8_t tcc_offset = 0;
+  lcc_status_t status = LCC_OK;
+  const int r =
+      sd_bus_message_read(message, "yyyy", &pl1, &pl2, &pl4, &tcc_offset);
+
+  if (r < 0) {
+    return r;
+  }
+
+  status = lcc_manager_set_power_limits(manager, pl1, pl2, pl4, tcc_offset);
+  if (status != LCC_OK) {
+    return lcc_dbus_error_set(ret_error, status);
+  }
+
+  return sd_bus_reply_method_return(message, "");
+}
+
+static const sd_bus_vtable manager_vtable[] = {
+    SD_BUS_VTABLE_START(0),
+    SD_BUS_METHOD("GetCapabilities", "", "s", method_get_capabilities,
+                  SD_BUS_VTABLE_UNPRIVILEGED),
+    SD_BUS_METHOD("GetState", "", "s", method_get_state,
+                  SD_BUS_VTABLE_UNPRIVILEGED),
+    SD_BUS_METHOD("SetProfile", "s", "", method_set_profile,
+                  SD_BUS_VTABLE_UNPRIVILEGED),
+    SD_BUS_VTABLE_END};
+
+static const sd_bus_vtable thermal_vtable[] = {
+    SD_BUS_VTABLE_START(0),
+    SD_BUS_METHOD("GetThermalState", "", "s", method_get_thermal_state,
+                  SD_BUS_VTABLE_UNPRIVILEGED),
+    SD_BUS_VTABLE_END};
+
+static const sd_bus_vtable fan_vtable[] = {
+    SD_BUS_VTABLE_START(0),
+    SD_BUS_METHOD("ApplyFanTable", "s", "", method_apply_fan_table,
+                  SD_BUS_VTABLE_UNPRIVILEGED),
+    SD_BUS_VTABLE_END};
+
+static const sd_bus_vtable power_vtable[] = {
+    SD_BUS_VTABLE_START(0),
+    SD_BUS_METHOD("SetPowerLimits", "yyyy", "", method_set_power_limits,
+                  SD_BUS_VTABLE_UNPRIVILEGED),
+    SD_BUS_VTABLE_END};
+
+int lcc_dbus_server_run(lcc_manager_t *manager, bool use_user_bus) {
+  sd_bus *bus = NULL;
+  int r = 0;
+
+  if (manager == NULL) {
+    return -EINVAL;
+  }
+
+  if (use_user_bus) {
+    r = sd_bus_default_user(&bus);
+  } else {
+    r = sd_bus_default_system(&bus);
+  }
+  if (r < 0) {
+    lcc_log_error("failed to connect to D-Bus: %d", r);
+    return 1;
+  }
+
+  r = sd_bus_add_object_vtable(bus, NULL, lcc_object_path,
+                               "io.github.semcosm.Lcc1.Manager",
+                               manager_vtable, manager);
+  if (r < 0) {
+    lcc_log_error("failed to register Manager interface: %d", r);
+    sd_bus_unref(bus);
+    return 1;
+  }
+
+  r = sd_bus_add_object_vtable(bus, NULL, lcc_object_path,
+                               "io.github.semcosm.Lcc1.Thermal",
+                               thermal_vtable, manager);
+  if (r < 0) {
+    lcc_log_error("failed to register Thermal interface: %d", r);
+    sd_bus_unref(bus);
+    return 1;
+  }
+
+  r = sd_bus_add_object_vtable(bus, NULL, lcc_object_path,
+                               "io.github.semcosm.Lcc1.Fan", fan_vtable,
+                               manager);
+  if (r < 0) {
+    lcc_log_error("failed to register Fan interface: %d", r);
+    sd_bus_unref(bus);
+    return 1;
+  }
+
+  r = sd_bus_add_object_vtable(bus, NULL, lcc_object_path,
+                               "io.github.semcosm.Lcc1.Power", power_vtable,
+                               manager);
+  if (r < 0) {
+    lcc_log_error("failed to register Power interface: %d", r);
+    sd_bus_unref(bus);
+    return 1;
+  }
+
+  r = sd_bus_request_name(bus, lcc_bus_name, 0);
+  if (r < 0) {
+    lcc_log_error("failed to acquire bus name %s: %d", lcc_bus_name, r);
+    sd_bus_unref(bus);
+    return 1;
+  }
+
+  for (;;) {
+    r = sd_bus_process(bus, NULL);
+    if (r < 0) {
+      lcc_log_error("D-Bus processing failed: %d", r);
+      sd_bus_unref(bus);
+      return 1;
+    }
+    if (r > 0) {
+      continue;
+    }
+
+    r = sd_bus_wait(bus, (uint64_t)-1);
+    if (r < 0) {
+      lcc_log_error("D-Bus wait failed: %d", r);
+      sd_bus_unref(bus);
+      return 1;
+    }
+  }
+}

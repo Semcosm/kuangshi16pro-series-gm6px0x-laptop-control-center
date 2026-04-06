@@ -1,4 +1,4 @@
-#include "profile-service/profile_service.h"
+#include "lcc/profile.h"
 
 #include <ctype.h>
 #include <stdio.h>
@@ -375,11 +375,7 @@ lcc_status_t lcc_profile_document_load(const char *path,
                                sizeof(document->fan_table.name));
   }
 
-  if (document->has_fan_table) {
-    return lcc_validate_fan_table(&document->fan_table);
-  }
-
-  return LCC_OK;
+  return lcc_profile_document_validate(document);
 }
 
 lcc_status_t lcc_fan_table_load_file(const char *path, lcc_fan_table_t *table) {

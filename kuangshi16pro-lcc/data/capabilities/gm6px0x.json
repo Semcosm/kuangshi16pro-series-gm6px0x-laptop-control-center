@@ -1,0 +1,19 @@
+{
+  "model": "GM6PX0X",
+  "platform_profile": {
+    "preferred": true,
+    "fallback_required": true
+  },
+  "amw0": {
+    "call_node": "/proc/acpi/call",
+    "ecrr_candidates": [
+      "\\_SB.INOU.ECRR",
+      "\\_SB_.INOU.ECRR"
+    ]
+  },
+  "features": {
+    "fan_table_1p5": true,
+    "smart_apc": true,
+    "gpu_mux": "experimental"
+  }
+}

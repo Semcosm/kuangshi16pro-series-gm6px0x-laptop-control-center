@@ -1,0 +1,10 @@
+{
+  "name": "Mode4_Profile1",
+  "mode_family": "custom",
+  "pl1": 130,
+  "pl2": 130,
+  "pl4": 200,
+  "tcc_offset": 5,
+  "fan_table": "M4T1",
+  "fan_switch_speed": 500
+}

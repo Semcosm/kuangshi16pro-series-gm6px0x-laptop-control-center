@@ -1,8 +1,10 @@
 #include <assert.h>
 #include <string.h>
 
-#include "backend-amw0/amw0_backend.h"
-#include "profile-service/profile_service.h"
+#include "lcc/backend.h"
+#include "lcc/profile.h"
+
+void lcc_run_manager_tests(void);
 
 static void test_mode_plan(void) {
   lcc_operating_mode_t mode = LCC_MODE_OFFICE;
@@ -76,8 +78,8 @@ static void test_profile_document_load(void) {
   lcc_profile_document_t document;
   lcc_apply_plan_t plan;
 
-  assert(lcc_profile_document_load("fixtures/demo-profile.ini", &document) ==
-         LCC_OK);
+  assert(lcc_profile_document_load("tests/fixtures/demo-profile.ini",
+                                   &document) == LCC_OK);
   assert(document.has_mode);
   assert(document.mode == LCC_MODE_CUSTOM);
   assert(document.has_power_limits);
@@ -96,5 +98,6 @@ int main(void) {
   test_fan_plan();
   test_amw0_expr_format();
   test_profile_document_load();
+  lcc_run_manager_tests();
   return 0;
 }

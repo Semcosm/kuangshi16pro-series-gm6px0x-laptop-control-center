@@ -1,0 +1,13 @@
+{
+  "name": "M4T1",
+  "activated": true,
+  "fan_control_respective": true,
+  "cpu": [
+    {"id": 0, "up": 40, "down": 37, "duty": 18},
+    {"id": 1, "up": 43, "down": 40, "duty": 23}
+  ],
+  "gpu": [
+    {"id": 0, "up": 45, "down": 42, "duty": 20},
+    {"id": 1, "up": 48, "down": 45, "duty": 25}
+  ]
+}

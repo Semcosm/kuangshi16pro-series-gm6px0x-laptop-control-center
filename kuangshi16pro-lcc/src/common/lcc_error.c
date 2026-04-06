@@ -1,4 +1,4 @@
-#include "common/lcc_error.h"
+#include "lcc/error.h"
 
 const char *lcc_status_string(lcc_status_t status) {
   switch (status) {

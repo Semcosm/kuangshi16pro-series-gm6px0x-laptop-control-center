@@ -1,0 +1,12 @@
+<!DOCTYPE node PUBLIC "-//freedesktop//DTD D-BUS Object Introspection 1.0//EN"
+ "http://www.freedesktop.org/standards/dbus/1.0/introspect.dtd">
+<node>
+  <interface name="io.github.semcosm.Lcc1.Power">
+    <method name="SetPowerLimits">
+      <arg name="pl1" type="y" direction="in"/>
+      <arg name="pl2" type="y" direction="in"/>
+      <arg name="pl4" type="y" direction="in"/>
+      <arg name="tcc_offset" type="y" direction="in"/>
+    </method>
+  </interface>
+</node>

@@ -51,9 +51,9 @@ Map this machine to the vendor fan-table family and confirm:
 
 ## Linux Build Order
 
-1. `backend-amw0`
+1. `backends/amw0`
    Raw packet packing and send/read helpers.
-2. `profile-service`
+2. `core/profile` + `core/fan` + `core/power`
    `MainOption`, `ModeProfile`, fan table, and power-limit orchestration.
 3. `state-reader`
    temps, fan RPM, mode, and support/status bits.

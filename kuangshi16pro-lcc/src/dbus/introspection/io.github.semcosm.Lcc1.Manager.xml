@@ -1,0 +1,15 @@
+<!DOCTYPE node PUBLIC "-//freedesktop//DTD D-BUS Object Introspection 1.0//EN"
+ "http://www.freedesktop.org/standards/dbus/1.0/introspect.dtd">
+<node>
+  <interface name="io.github.semcosm.Lcc1.Manager">
+    <method name="GetCapabilities">
+      <arg name="capabilities_json" type="s" direction="out"/>
+    </method>
+    <method name="GetState">
+      <arg name="state_json" type="s" direction="out"/>
+    </method>
+    <method name="SetProfile">
+      <arg name="profile_name" type="s" direction="in"/>
+    </method>
+  </interface>
+</node>
