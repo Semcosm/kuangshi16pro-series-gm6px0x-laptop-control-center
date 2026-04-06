@@ -1,0 +1,52 @@
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install lint dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y shellcheck
+      - name: Run lint
+        run: bash kuangshi16pro-lcc/scripts/lint.sh
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential pkg-config libsystemd-dev libpolkit-gobject-1-dev
+      - name: Build
+        run: make -C kuangshi16pro-lcc clean all
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install test dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential pkg-config libsystemd-dev libpolkit-gobject-1-dev
+      - name: Run unit tests
+        run: make -C kuangshi16pro-lcc clean test
+
+  integration-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install integration dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential pkg-config libsystemd-dev libpolkit-gobject-1-dev dbus systemd shellcheck
+      - name: Run integration smoke
+        run: bash kuangshi16pro-lcc/tests/integration/test_dbus_smoke.sh

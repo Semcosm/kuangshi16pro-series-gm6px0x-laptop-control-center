@@ -29,11 +29,13 @@ Start with:
 - `docs/architecture.md`
 - `docs/profiles.md`
 - `docs/backend-amw0.md`
+- `docs/ci.md`
 
 Build:
 
 - `make -C kuangshi16pro-lcc`
 - `make -C kuangshi16pro-lcc test`
+- `bash kuangshi16pro-lcc/scripts/lint.sh`
 - `./kuangshi16pro-lcc/build/lccctl --help`
 - `./kuangshi16pro-lcc/build/lccd --help`
 
@@ -74,6 +76,8 @@ Development helpers:
 
 - `bash kuangshi16pro-lcc/scripts/dev-run.sh`
   start `lccd` on a temporary user bus
+- `bash kuangshi16pro-lcc/tests/integration/test_dbus_smoke.sh`
+  run the mock-backed D-Bus integration smoke test
 - `bash kuangshi16pro-lcc/scripts/smoke-test.sh`
   build, launch `lccd` on a temporary user bus, and call the D-Bus API
 

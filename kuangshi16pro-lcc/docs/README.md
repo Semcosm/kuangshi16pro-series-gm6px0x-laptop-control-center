@@ -23,6 +23,8 @@ Start here:
   which repository files are still worth reading, and what each one is for
 - `roadmap.md`
   current build order and reverse-engineering priorities
+- `ci.md`
+  GitHub Actions checks and the protected-branch required-check list
 
 These notes are curated for writing code. The full reverse-engineering record
 remains in the repository root and `windows-control-center/`.
