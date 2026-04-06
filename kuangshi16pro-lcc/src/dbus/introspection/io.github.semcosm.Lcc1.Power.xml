@@ -3,6 +3,8 @@
 <node>
   <interface name="io.github.semcosm.Lcc1.Power">
     <method name="SetPowerLimits">
+      <annotation name="io.github.semcosm.Lcc1.Access" value="write"/>
+      <annotation name="io.github.semcosm.Lcc1.AuthorizationAction" value="io.github.semcosm.Lcc1.modify"/>
       <arg name="pl1" type="y" direction="in"/>
       <arg name="pl2" type="y" direction="in"/>
       <arg name="pl4" type="y" direction="in"/>

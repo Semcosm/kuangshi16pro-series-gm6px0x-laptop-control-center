@@ -1,51 +1,52 @@
 # D-Bus API
 
-Planned public API surface:
+Stable service surface for v1:
 
 - bus name: `io.github.semcosm.Lcc1`
 - object path: `/io/github/semcosm/Lcc1`
 - interfaces:
   - `io.github.semcosm.Lcc1.Manager`
-  - `io.github.semcosm.Lcc1.Thermal`
   - `io.github.semcosm.Lcc1.Fan`
   - `io.github.semcosm.Lcc1.Power`
 
 Design rules:
 
 - methods stay declarative, not transport-shaped
-- public callers request target state, not EC bytes or `WMBC` packets
-- read operations should be available without prompting when policy allows
-- write operations go through policy checks in the daemon
-- API responses should distinguish `requested` from `effective`
+- product-facing clients talk only to D-Bus, not to backend internals
+- reads and writes are split by policy
+- every mutating method enters one daemon-side authorization hook before any
+  state transition or backend apply
+- every mutating method reaches the transaction executor before backend access
+- responses distinguish `requested`, `effective`, and `pending`
 
-First candidate methods:
+Stable methods in v1:
 
-- `GetState()`
-- `GetCapabilities()`
-- `SetMode(mode_name)`
-- `SetProfile(profile_name)`
-- `SetPowerLimits(pl1, pl2, pl4, tcc_offset, has_pl1, has_pl2, has_pl4, has_tcc_offset)`
-- `ApplyFanTable(table_name)`
+- `Manager.GetCapabilities() -> s`
+- `Manager.GetState() -> s`
+- `Manager.SetMode(mode_name: s)`
+- `Manager.SetProfile(profile_name: s)`
+- `Fan.ApplyFanTable(table_name: s)`
+- `Power.SetPowerLimits(pl1: y, pl2: y, pl4: y, tcc_offset: y, has_pl1: b, has_pl2: b, has_pl4: b, has_tcc_offset: b)`
 
-Current implementation status:
+Authorization model:
 
-- `io.github.semcosm.Lcc1.Manager`
-  implements `GetCapabilities`, `GetState`, `SetMode`, and `SetProfile`
-- `io.github.semcosm.Lcc1.Fan`
-  implements `ApplyFanTable`
-- `io.github.semcosm.Lcc1.Power`
-  implements partial `SetPowerLimits`
-- `io.github.semcosm.Lcc1.Thermal`
-  implements `GetThermalState`
+- reads are allowed by default on the system bus
+- writes are gated twice:
+  - bus policy only allows mutating calls from privileged senders on the system bus
+  - the daemon runs a write authorization hook before dispatching the request
+- the current hook allows:
+  - any caller on the user bus, for development
+  - privileged callers on the system bus
+- the hook already carries an action id and is the reserved integration point for
+  future Polkit checks
 
-At this stage the daemon is stateful but still scaffold-level:
+Current transport shape:
 
-- write methods update daemon-owned requested/effective state
-- they do not yet touch hardware backends
-- `GetState` and `GetThermalState` return JSON strings to keep the first
-  transport iteration simple
-- `SetPowerLimits` accepts presence flags so CLI callers can update only the
-  fields they actually set
+- `GetState` returns a JSON string with `requested`, `effective`, `pending`, and
+  `transaction`
+- `GetCapabilities` returns the model capability JSON
+- `SetPowerLimits` uses presence flags so clients can perform partial updates
 
-Experimental features such as MUX or dGPU direct-connect should remain in a
-separate interface or be hidden behind a capability gate.
+Non-stable or future-facing APIs such as thermal detail, MUX, or dGPU
+direct-connect should stay out of the stable v1 surface until their semantics
+are settled.

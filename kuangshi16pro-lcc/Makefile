@@ -55,6 +55,7 @@ DAEMON_SRCS := \
 	$(SRC_DIR)/daemon/manager.c \
 	$(SRC_DIR)/daemon/transaction.c \
 	$(SRC_DIR)/daemon/errors.c \
+	$(SRC_DIR)/dbus/policy.c \
 	$(SRC_DIR)/dbus/server.c
 
 TEST_SRCS := \

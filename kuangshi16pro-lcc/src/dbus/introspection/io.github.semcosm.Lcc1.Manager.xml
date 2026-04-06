@@ -2,16 +2,23 @@
  "http://www.freedesktop.org/standards/dbus/1.0/introspect.dtd">
 <node>
   <interface name="io.github.semcosm.Lcc1.Manager">
+    <annotation name="io.github.semcosm.Lcc1.InterfaceVersion" value="1"/>
     <method name="GetCapabilities">
+      <annotation name="io.github.semcosm.Lcc1.Access" value="read"/>
       <arg name="capabilities_json" type="s" direction="out"/>
     </method>
     <method name="GetState">
+      <annotation name="io.github.semcosm.Lcc1.Access" value="read"/>
       <arg name="state_json" type="s" direction="out"/>
     </method>
     <method name="SetMode">
+      <annotation name="io.github.semcosm.Lcc1.Access" value="write"/>
+      <annotation name="io.github.semcosm.Lcc1.AuthorizationAction" value="io.github.semcosm.Lcc1.modify"/>
       <arg name="mode_name" type="s" direction="in"/>
     </method>
     <method name="SetProfile">
+      <annotation name="io.github.semcosm.Lcc1.Access" value="write"/>
+      <annotation name="io.github.semcosm.Lcc1.AuthorizationAction" value="io.github.semcosm.Lcc1.modify"/>
       <arg name="profile_name" type="s" direction="in"/>
     </method>
   </interface>

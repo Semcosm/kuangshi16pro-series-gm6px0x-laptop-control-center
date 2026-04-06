@@ -5,7 +5,7 @@ Documentation=man:lccd(8)
 [Service]
 Type=dbus
 BusName=io.github.semcosm.Lcc1
-ExecStart=/usr/lib/kuangshi16pro-lcc/lccd
+ExecStart=/usr/lib/kuangshi16pro-lcc/lccd --system
 Restart=on-failure
 
 [Install]

@@ -27,9 +27,15 @@ static lcc_status_t dbus_error_to_status(const sd_bus_error *error, int r) {
     if (strcmp(error->name, "io.github.semcosm.Lcc1.Error.Range") == 0) {
       return LCC_ERR_RANGE;
     }
+    if (strcmp(error->name, "io.github.semcosm.Lcc1.Error.NotSupported") == 0) {
+      return LCC_ERR_NOT_SUPPORTED;
+    }
     if (strcmp(error->name, "io.github.semcosm.Lcc1.Error.Unimplemented") ==
         0) {
       return LCC_ERR_UNIMPLEMENTED;
+    }
+    if (strcmp(error->name, "org.freedesktop.DBus.Error.AccessDenied") == 0) {
+      return LCC_ERR_PERMISSION;
     }
     if (strcmp(error->name, "org.freedesktop.DBus.Error.ServiceUnknown") == 0 ||
         strcmp(error->name, "org.freedesktop.DBus.Error.NameHasNoOwner") == 0) {
