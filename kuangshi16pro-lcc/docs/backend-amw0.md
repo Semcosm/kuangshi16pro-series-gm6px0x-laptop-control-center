@@ -57,10 +57,10 @@ This is the byte order the Linux backend must preserve.
 
 ## Relevant Scripts
 
-- `amw0-wmbc-pack.sh`
-- `amw0-wmbc-trace.sh`
-- `amw0-ecmg-read.sh`
-- `amw0-wkbc-scan.sh`
-- `amw0-scmd-scan.sh`
+- `scripts/amw0/amw0-wmbc-pack.sh`
+- `scripts/amw0/amw0-wmbc-trace.sh`
+- `scripts/amw0/amw0-ecmg-read.sh`
+- `scripts/amw0/amw0-wkbc-scan.sh`
+- `scripts/amw0/amw0-scmd-scan.sh`
 
 These scripts are the practical reference for the first Linux backend implementation.

@@ -2,6 +2,10 @@
 
 This note records the static findings from the Mechrevo Control Center package:
 
+The paths below describe a local analysis layout only. Vendor archives,
+extracted trees, copied executables, and symbol bundles are intentionally not
+tracked in Git. Windows-side helper scripts now live under `scripts/windows/`.
+
 - source archive:
   `windows-control-center/ControlCenter_5.17.51.33_Mechrevo.zip`
 - extracted installer tree:

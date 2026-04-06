@@ -102,7 +102,7 @@ The EC query handlers around the same area show:
 
 So some hotkeys or EC notifications only emit WMI events. They do not directly execute `OEMG`.
 
-This event path was confirmed locally with `amw0-event-path-test.sh`:
+This event path was confirmed locally with `scripts/amw0/amw0-event-path-test.sh`:
 
 - `WMBC(0, 0x03, 0x01)` made `WQAC1 = 0x1` and `_WED(D2) = 0x1`
 - `WMBC(0, 0x03, 0xF0)` made `WQAC1 = 0xF0` and `_WED(D2) = 0xF0`
@@ -145,8 +145,8 @@ This is now partly confirmed locally:
 
 Useful scripts in this directory now are:
 
-- `amw0-ec-watch.sh` for watching EC event/transport bytes live
-- `amw0-ecmg-read.sh` for reading AML `ECMG` fan/thermal bytes through `\_SB.INOU.ECRR`
-- `amw0-scmd-scan.sh` for one-byte `SCMD` scans with transport logging
-- `amw0-wkbc-scan.sh` for four-byte `WKBC` scans with transport logging
-- `amw0-wmbc-pack.sh` for building and sending a single `WMBC` payload
+- `scripts/amw0/amw0-ec-watch.sh` for watching EC event/transport bytes live
+- `scripts/amw0/amw0-ecmg-read.sh` for reading AML `ECMG` fan/thermal bytes through `\_SB.INOU.ECRR`
+- `scripts/amw0/amw0-scmd-scan.sh` for one-byte `SCMD` scans with transport logging
+- `scripts/amw0/amw0-wkbc-scan.sh` for four-byte `WKBC` scans with transport logging
+- `scripts/amw0/amw0-wmbc-pack.sh` for building and sending a single `WMBC` payload

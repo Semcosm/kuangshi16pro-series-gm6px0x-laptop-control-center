@@ -15,15 +15,15 @@ This file maps the existing research into the Linux implementation work.
 
 ## Scripts To Reuse
 
-- `amw0-wmbc-pack.sh`
+- `scripts/amw0/amw0-wmbc-pack.sh`
   Reference for packing Linux-side `WMBC(..., 0x04, buffer)` payloads.
-- `amw0-wmbc-trace.sh`
+- `scripts/amw0/amw0-wmbc-trace.sh`
   Reference for tracing a single send and inspecting EC-side transient bytes.
-- `amw0-ecmg-read.sh`
+- `scripts/amw0/amw0-ecmg-read.sh`
   Reference for reading `ECMG` through `\_SB.INOU.ECRR`.
-- `amw0-wkbc-scan.sh`
+- `scripts/amw0/amw0-wkbc-scan.sh`
   Reference for brute-force style command-path experiments.
-- `amw0-scmd-scan.sh`
+- `scripts/amw0/amw0-scmd-scan.sh`
   Reference for `SCMD`-side experiments.
 
 ## Windows Reverse Inputs

@@ -149,10 +149,10 @@ This file records only findings that are currently explicit enough to rely on.
 - `WQBA-analysis.md`
 - `AMW0-analysis.md`
 - `WQBA.mof`
-- `amw0-event-path-test.sh`
-- `amw0-wkbc-scan.sh`
-- `amw0-scmd-scan.sh`
-- `amw0-wmbc-pack.sh`
-- `amw0-wmbc-trace.sh`
-- `amw0-monitor-trace.sh`
-- `amw0-ecmg-read.sh`
+- `scripts/amw0/amw0-event-path-test.sh`
+- `scripts/amw0/amw0-wkbc-scan.sh`
+- `scripts/amw0/amw0-scmd-scan.sh`
+- `scripts/amw0/amw0-wmbc-pack.sh`
+- `scripts/amw0/amw0-wmbc-trace.sh`
+- `scripts/amw0/amw0-monitor-trace.sh`
+- `scripts/amw0/amw0-ecmg-read.sh`

@@ -1,6 +1,0 @@
-﻿[2026-04-05T23:44:35.1648946+08:00] Output directory: D:\download\kuangshi16pro-series-gm6px0x-laptop-control-center-main\kuangshi16pro-series-gm6px0x-laptop-control-center-main\windows-control-center\cc-deep-capture-20260405-234435
-[2026-04-05T23:44:35.1659003+08:00] ProcmonPath: D:\download\kuangshi16pro-series-gm6px0x-laptop-control-center-main\kuangshi16pro-series-gm6px0x-laptop-control-center-main\windows-control-center\Procmon64.exe
-[2026-04-05T23:44:35.1659003+08:00] DurationSec=30 SampleMs=250
-[2026-04-05T23:44:38.1103819+08:00] Starting Procmon: /AcceptEula /BackingFile D:\download\kuangshi16pro-series-gm6px0x-laptop-control-center-main\kuangshi16pro-series-gm6px0x-laptop-control-center-main\windows-control-center\cc-deep-capture-20260405-234435\procmon.pml /Quiet /Minimized /NoFilter
-[2026-04-05T23:45:10.4687383+08:00] Stopping Procmon
-[2026-04-05T23:45:15.8758432+08:00] Finished

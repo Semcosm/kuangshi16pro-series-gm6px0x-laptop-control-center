@@ -9,6 +9,11 @@ This repository focuses on three things:
   with `GCUService.exe` as the current Windows-side priority
 - building a Linux-side control-center-grade toolchain for this machine
 
+This is intended to stay a source-first development repository:
+
+- tracked content should be code, scripts, notes, reverse reports, and fixtures
+- vendor binaries, extracted installers, and runtime capture outputs should stay local and untracked
+
 ## Current Scope
 
 - `AMW0` transport facts and EC/ECMG observations are documented in:
@@ -18,6 +23,7 @@ This repository focuses on three things:
   - `windows-control-center-analysis.md`
   - `windows-control-center/`
   - `windows-control-center/GCUService_reverse_report.md`
+  - local vendor executables may exist next to those reports, but they are intentionally ignored
 - Linux implementation work should go under:
   - `kuangshi16pro-lcc/`
   - `kuangshi16pro-lcc/docs/`
@@ -26,22 +32,23 @@ This repository focuses on three things:
 - legacy NBFC-compatible experiments are kept only as historical reference in:
   - `legacy-nbfc-configs/`
 
-## Top-Level Naming
+## Repository Layout
 
-The top-level tools are grouped by transport or source:
+The workspace is organized by role rather than leaving every helper in the root:
 
-- `amw0-*`
+- `scripts/amw0/`
   AMW0 WMI transport experiments, traces, scans, and payload helpers
-- `ec-*`
+- `scripts/ec/`
   direct EC observation helpers
-- `acpi-*`
+- `scripts/acpi/`
   ACPI table collection helpers
+- `scripts/windows/`
+  Windows-side capture and triage helpers
 - `windows-control-center/*`
-  vendor Windows package artifacts and capture helpers
+  Windows reverse reports and string notes
 - `kuangshi16pro-lcc/*`
   Linux control-center source tree
 
-This naming is intentional and currently consistent enough for a Git repository.
 The only old `nbfc` naming was moved into `legacy-nbfc-configs/`.
 
 ## Useful Entry Points
@@ -50,11 +57,11 @@ The only old `nbfc` naming was moved into `legacy-nbfc-configs/`.
   short list of findings that are strong enough to rely on
 - `AMW0-analysis.md`
   deeper AMW0, ECXP, and ECMG notes
-- `amw0-ecmg-read.sh`
+- `scripts/amw0/amw0-ecmg-read.sh`
   read AML `ECMG` bytes through `\_SB.INOU.ECRR`
-- `amw0-wmbc-trace.sh`
+- `scripts/amw0/amw0-wmbc-trace.sh`
   trace a single `WMBC(..., 0x04, ...)` send
-- `windows-control-center/windows-cc-capture.ps1`
+- `scripts/windows/windows-cc-capture.ps1`
   no-install Windows-side capture helper
 - `windows-control-center/GCUService_reverse_report.md`
   current highest-value Windows reverse target
@@ -74,5 +81,6 @@ The only old `nbfc` naming was moved into `legacy-nbfc-configs/`.
 ## Notes
 
 - `amw0-logs/` and `ec-probe-logs/` are runtime artifact directories.
-- unpacked Windows package trees are intentionally not required for a clean repo checkout.
+- vendor binaries, installer drops, and Windows capture directories are intentionally not required for a clean repo checkout.
+- `WQBA.bin` is treated the same way: useful locally, but not something the GitHub repo needs to carry.
 - the repository name uses Git-friendly ASCII; the full machine name remains in this README.

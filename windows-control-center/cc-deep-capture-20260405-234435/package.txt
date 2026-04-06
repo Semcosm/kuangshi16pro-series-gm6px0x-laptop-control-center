@@ -1,5 +1,0 @@
-Name: ControlCenter3
-PackageFamilyName: ControlCenter3_wrbgcf7aesyd8
-Version: 5.17.49.14
-Publisher: CN=AISTONE GLOBAL (SUZHOU) LIMITED, O=AISTONE GLOBAL (SUZHOU) LIMITED, L=Suzhou, S=Jiangsu, C=CN, OID.1.3.6.1.4.1.311.60.2.1.1=Suzhou, OID.1.3.6.1.4.1.311.60.2.1.2=Jiangsu, OID.1.3.6.1.4.1.311.60.2.1.3=CN, SERIALNUMBER=91320594321285131E, OID.2.5.4.15=Private Organization
-InstallLocation: C:\Program Files\WindowsApps\ControlCenter3_5.17.49.14_x64__wrbgcf7aesyd8

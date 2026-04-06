@@ -9,8 +9,18 @@ windows-control-center/extracted/
 windows-control-center/msix/
 windows-control-center/msix-x64/
 windows-control-center/cc-capture-*/
+windows-control-center/cc-deep-capture-*/
+windows-control-center/cc-static-triage-*/
+windows-control-center/*.exe
+windows-control-center/*.dll
+windows-control-center/*.sys
+windows-control-center/*.pdb
+windows-control-center/*.msi
+windows-control-center/*.msix
+windows-control-center/*.msixbundle
 
 *.monitor.txt
+WQBA.bin
 
 acpi-scan/
 windows-control-center/*.zip

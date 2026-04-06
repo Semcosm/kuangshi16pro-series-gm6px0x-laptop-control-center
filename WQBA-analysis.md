@@ -2,6 +2,9 @@
 
 `WQBA.bin` is a standard compressed ACPI/WMI BMF blob.
 
+The blob itself is treated as a local analysis artifact and is not required for
+the Git-tracked repository layout. The decoded text remains in `WQBA.mof`.
+
 - Header bytes are `46 4f 4d 42 01 00 00 00`, which matches the `FOMB` + version 1 format used by `bmfdec`.
 - The next two little-endian dwords are the compressed size without the 16-byte header (`0x0A83`) and the decompressed size (`0x49F0`).
 - Decompression with upstream `bmf2mof` succeeds with no patching. The decoded text is stored in `WQBA.mof`.
