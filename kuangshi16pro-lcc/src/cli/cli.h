@@ -5,7 +5,6 @@
 #include <stdint.h>
 #include <stdio.h>
 
-#include "lcc/backend.h"
 #include "lcc/error.h"
 #include "lcc/plan.h"
 
@@ -16,9 +15,6 @@ bool lcc_cli_parse_bus_flag(const char *arg, bool *use_user_bus);
 lcc_status_t lcc_cli_parse_u8(const char *text, uint8_t *value);
 lcc_status_t lcc_cli_parse_u16(const char *text, uint16_t *value);
 lcc_status_t lcc_cli_parse_u32_reply(const char *text, uint32_t *value);
-lcc_status_t lcc_cli_init_backend(amw0_backend_t *backend,
-                                  const char *call_node, bool dry_run);
-lcc_status_t lcc_cli_print_transport_snapshot(amw0_backend_t *backend);
 int lcc_cli_print_plan_or_unimplemented(const lcc_apply_plan_t *plan,
                                         bool execute);
 

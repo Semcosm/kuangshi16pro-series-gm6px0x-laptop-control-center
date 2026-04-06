@@ -1,21 +1,28 @@
 #include <assert.h>
 #include <string.h>
 
+#include "backends/backend.h"
 #include "daemon/manager.h"
 
 static void test_manager_init_and_capabilities(void) {
+  lcc_backend_t backend;
+  lcc_mock_backend_t mock_backend;
   lcc_manager_t manager;
 
-  assert(lcc_manager_init(&manager, "data/capabilities/gm6px0x.json") ==
+  assert(lcc_mock_backend_init(&mock_backend, &backend) == LCC_OK);
+  assert(lcc_manager_init(&manager, &backend, "data/capabilities/gm6px0x.json") ==
          LCC_OK);
   assert(strstr(lcc_manager_capabilities_json(&manager), "\"GM6PX0X\"") != NULL);
 }
 
 static void test_manager_profile_and_fan_updates(void) {
+  lcc_backend_t backend;
+  lcc_mock_backend_t mock_backend;
   lcc_manager_t manager;
   char json[LCC_MANAGER_JSON_MAX];
 
-  assert(lcc_manager_init(&manager, NULL) == LCC_OK);
+  assert(lcc_mock_backend_init(&mock_backend, &backend) == LCC_OK);
+  assert(lcc_manager_init(&manager, &backend, NULL) == LCC_OK);
   assert(lcc_manager_set_mode(&manager, "turbo") == LCC_OK);
   assert(lcc_manager_apply_fan_table(&manager, "M4T1") == LCC_OK);
   assert(lcc_manager_get_state_json(&manager, json, sizeof(json)) == LCC_OK);
@@ -24,11 +31,14 @@ static void test_manager_profile_and_fan_updates(void) {
 }
 
 static void test_manager_power_update(void) {
+  lcc_backend_t backend;
+  lcc_mock_backend_t mock_backend;
   lcc_manager_t manager;
   lcc_power_limits_t limits;
   char json[LCC_MANAGER_JSON_MAX];
 
-  assert(lcc_manager_init(&manager, NULL) == LCC_OK);
+  assert(lcc_mock_backend_init(&mock_backend, &backend) == LCC_OK);
+  assert(lcc_manager_init(&manager, &backend, NULL) == LCC_OK);
   memset(&limits, 0, sizeof(limits));
   limits.pl1.present = true;
   limits.pl1.value = 75u;
@@ -47,9 +57,12 @@ static void test_manager_power_update(void) {
 }
 
 static void test_manager_rejects_unsafe_names(void) {
+  lcc_backend_t backend;
+  lcc_mock_backend_t mock_backend;
   lcc_manager_t manager;
 
-  assert(lcc_manager_init(&manager, NULL) == LCC_OK);
+  assert(lcc_mock_backend_init(&mock_backend, &backend) == LCC_OK);
+  assert(lcc_manager_init(&manager, &backend, NULL) == LCC_OK);
   assert(lcc_manager_set_profile(&manager, "bad name") ==
          LCC_ERR_INVALID_ARGUMENT);
   assert(lcc_manager_apply_fan_table(&manager, "bad/name") ==

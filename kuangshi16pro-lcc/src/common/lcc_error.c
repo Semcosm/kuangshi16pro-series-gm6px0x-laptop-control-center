@@ -16,6 +16,8 @@ const char *lcc_status_string(lcc_status_t status) {
       return "parse error";
     case LCC_ERR_RANGE:
       return "value out of range";
+    case LCC_ERR_NOT_SUPPORTED:
+      return "not supported";
     case LCC_ERR_UNIMPLEMENTED:
       return "not implemented";
     case LCC_ERR_BUFFER_TOO_SMALL:

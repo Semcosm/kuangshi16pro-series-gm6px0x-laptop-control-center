@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "backends/backend.h"
 #include "common/lcc_log.h"
 #include "daemon/manager.h"
 #include "dbus/server.h"
@@ -19,6 +20,8 @@ static void print_usage(FILE *stream) {
 }
 
 int lcc_daemon_main(int argc, char **argv) {
+  lcc_backend_t backend;
+  lcc_mock_backend_t mock_backend;
   lcc_manager_t manager;
   const char *capabilities_path = NULL;
   bool use_user_bus = false;
@@ -47,7 +50,13 @@ int lcc_daemon_main(int argc, char **argv) {
     return 1;
   }
 
-  status = lcc_manager_init(&manager, capabilities_path);
+  status = lcc_mock_backend_init(&mock_backend, &backend);
+  if (status != LCC_OK) {
+    lcc_log_error("backend init failed: %s", lcc_status_string(status));
+    return 1;
+  }
+
+  status = lcc_manager_init(&manager, &backend, capabilities_path);
   if (status != LCC_OK) {
     lcc_log_error("manager init failed: %s", lcc_status_string(status));
     return 1;

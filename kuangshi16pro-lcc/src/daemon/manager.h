@@ -5,24 +5,20 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "lcc/backend.h"
 #include "lcc/error.h"
-#include "lcc/power.h"
 
 #define LCC_MANAGER_JSON_MAX 4096u
 
 typedef struct {
+  lcc_backend_t *backend;
+  lcc_backend_capabilities_t backend_capabilities;
+  lcc_state_snapshot_t state_cache;
   char capabilities_json[LCC_MANAGER_JSON_MAX];
-  char requested_profile[64];
-  char effective_profile[64];
-  char requested_fan_table[64];
-  char effective_fan_table[64];
-  bool has_requested_power;
-  bool has_effective_power;
-  lcc_power_limits_t requested_power;
-  lcc_power_limits_t effective_power;
 } lcc_manager_t;
 
 lcc_status_t lcc_manager_init(lcc_manager_t *manager,
+                              lcc_backend_t *backend,
                               const char *capabilities_path);
 const char *lcc_manager_capabilities_json(const lcc_manager_t *manager);
 lcc_status_t lcc_manager_get_state_json(const lcc_manager_t *manager,

@@ -5,6 +5,7 @@
 
 #include "backends/amw0/ec-addr-map.h"
 #include "backends/amw0/ecmg.h"
+#include "cli/amw0_cli.h"
 #include "cli/dbus_client.h"
 #include "common/lcc_log.h"
 
@@ -108,7 +109,7 @@ int lcc_cmd_state_observe(int argc, char **argv) {
     return lcc_cli_exit_with_status(LCC_ERR_INVALID_ARGUMENT);
   }
 
-  status = lcc_cli_init_backend(&backend, call_node, false);
+  status = lcc_cli_init_amw0_backend(&backend, call_node, false);
   if (status != LCC_OK) {
     return lcc_cli_exit_with_status(status);
   }

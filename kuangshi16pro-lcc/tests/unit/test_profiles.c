@@ -1,9 +1,10 @@
 #include <assert.h>
 #include <string.h>
 
-#include "lcc/backend.h"
+#include "backends/amw0/wmbc-pack.h"
 #include "lcc/profile.h"
 
+void lcc_run_backend_mock_tests(void);
 void lcc_run_manager_tests(void);
 
 static void test_mode_plan(void) {
@@ -98,6 +99,7 @@ int main(void) {
   test_fan_plan();
   test_amw0_expr_format();
   test_profile_document_load();
+  lcc_run_backend_mock_tests();
   lcc_run_manager_tests();
   return 0;
 }

@@ -122,37 +122,6 @@ lcc_status_t lcc_cli_parse_u32_reply(const char *text, uint32_t *value) {
   return LCC_OK;
 }
 
-lcc_status_t lcc_cli_init_backend(amw0_backend_t *backend,
-                                  const char *call_node, bool dry_run) {
-  return amw0_backend_init(backend, call_node != NULL ? call_node
-                                                      : lcc_cli_default_call_node(),
-                           dry_run);
-}
-
-lcc_status_t lcc_cli_print_transport_snapshot(amw0_backend_t *backend) {
-  char wqac0[AMW0_REPLY_MAX];
-  char wqac1[AMW0_REPLY_MAX];
-  char wed_d2[AMW0_REPLY_MAX];
-  lcc_status_t status = LCC_OK;
-
-  status = amw0_backend_read_wqac(backend, 0u, wqac0, sizeof(wqac0));
-  if (status != LCC_OK) {
-    return status;
-  }
-  status = amw0_backend_read_wqac(backend, 1u, wqac1, sizeof(wqac1));
-  if (status != LCC_OK) {
-    return status;
-  }
-  status =
-      amw0_backend_eval(backend, "\\_SB.AMW0._WED 0xD2", wed_d2, sizeof(wed_d2));
-  if (status != LCC_OK) {
-    return status;
-  }
-
-  (void)printf("WQAC0=%s\nWQAC1=%s\nWED_D2=%s\n", wqac0, wqac1, wed_d2);
-  return LCC_OK;
-}
-
 int lcc_cli_print_plan_or_unimplemented(const lcc_apply_plan_t *plan,
                                         bool execute) {
   lcc_apply_plan_print(stdout, plan);

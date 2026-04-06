@@ -31,6 +31,18 @@ Code split in phase 1:
 - `src/daemon/` and `src/dbus/`
   scaffold for the future service boundary
 
+Backend execution contract:
+
+- `include/lcc/backend.h` is the only stable interface between orchestration and
+  hardware access
+- daemon-side orchestration talks to a backend handle, not to AMW0 transport
+  helpers directly
+- backends expose the same contract for `probe`, `read_state`, `apply_profile`,
+  `apply_mode`, `apply_power_limits`, and `apply_fan_table`
+- apply/read calls return a shared `lcc_backend_result_t`, so change detection,
+  hardware-write reporting, and reboot-required hints are modeled the same way
+  across mock, standard, and vendor backends
+
 The current CLI still talks to the AMW0 backend directly for observation and
 transport experiments. That is a temporary transitional arrangement until the
 daemon and D-Bus server are wired up.

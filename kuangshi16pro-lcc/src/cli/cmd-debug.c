@@ -3,6 +3,9 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "backends/amw0/wmbc-pack.h"
+#include "cli/amw0_cli.h"
+
 int lcc_cmd_debug_raw_wmbc(int argc, char **argv) {
   amw0_backend_t backend;
   amw0_packet_t packet;
@@ -57,7 +60,7 @@ int lcc_cmd_debug_raw_wmbc(int argc, char **argv) {
     return lcc_cli_exit_with_status(LCC_ERR_INVALID_ARGUMENT);
   }
 
-  status = lcc_cli_init_backend(&backend, call_node, dry_run);
+  status = lcc_cli_init_amw0_backend(&backend, call_node, dry_run);
   if (status != LCC_OK) {
     return lcc_cli_exit_with_status(status);
   }

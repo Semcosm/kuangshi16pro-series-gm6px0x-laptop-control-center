@@ -21,6 +21,10 @@ int lcc_dbus_error_set(sd_bus_error *ret_error, lcc_status_t status) {
     case LCC_ERR_RANGE:
       return sd_bus_error_set_const(
           ret_error, "io.github.semcosm.Lcc1.Error.Range", "value out of range");
+    case LCC_ERR_NOT_SUPPORTED:
+      return sd_bus_error_set_const(
+          ret_error, "io.github.semcosm.Lcc1.Error.NotSupported",
+          "not supported");
     case LCC_ERR_UNIMPLEMENTED:
       return sd_bus_error_set_const(
           ret_error, "io.github.semcosm.Lcc1.Error.Unimplemented",

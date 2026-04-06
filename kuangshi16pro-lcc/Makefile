@@ -21,7 +21,8 @@ TEST_BIN := $(BUILD_DIR)/test_kuangshi16pro_lcc
 
 COMMON_SRCS := \
 	$(SRC_DIR)/common/lcc_error.c \
-	$(SRC_DIR)/common/lcc_log.c
+	$(SRC_DIR)/common/lcc_log.c \
+	$(SRC_DIR)/backends/backend.c
 
 APP_SRCS := \
 	$(COMMON_SRCS) \
@@ -36,6 +37,7 @@ APP_SRCS := \
 	$(SRC_DIR)/core/power/limits.c \
 	$(SRC_DIR)/core/fan/table.c \
 	$(SRC_DIR)/core/fan/table-apply.c \
+	$(SRC_DIR)/cli/amw0_cli.c \
 	$(SRC_DIR)/cli/dbus_client.c \
 	$(SRC_DIR)/cli/main.c \
 	$(SRC_DIR)/cli/cmd-state.c \
@@ -47,6 +49,7 @@ APP_SRCS := \
 
 DAEMON_SRCS := \
 	$(COMMON_SRCS) \
+	$(SRC_DIR)/backends/mock/mock-backend.c \
 	$(SRC_DIR)/daemon/app.c \
 	$(SRC_DIR)/daemon/main.c \
 	$(SRC_DIR)/daemon/manager.c \
@@ -55,6 +58,7 @@ DAEMON_SRCS := \
 
 TEST_SRCS := \
 	$(COMMON_SRCS) \
+	$(SRC_DIR)/backends/mock/mock-backend.c \
 	$(SRC_DIR)/backends/amw0/transport.c \
 	$(SRC_DIR)/backends/amw0/wmbc-pack.c \
 	$(SRC_DIR)/core/profile/plan.c \
@@ -65,6 +69,7 @@ TEST_SRCS := \
 	$(SRC_DIR)/core/fan/table.c \
 	$(SRC_DIR)/core/fan/table-apply.c \
 	$(SRC_DIR)/daemon/manager.c \
+	$(TEST_DIR)/unit/test_backend_mock.c \
 	$(TEST_DIR)/unit/test_profiles.c \
 	$(TEST_DIR)/unit/test_manager.c
 

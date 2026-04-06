@@ -38,24 +38,29 @@ static bool name_is_safe(const char *text) {
   return true;
 }
 
-static const char *canonical_mode_name(const char *mode_name) {
-  if (mode_name == NULL) {
-    return NULL;
+static lcc_status_t mode_from_name(const char *mode_name,
+                                   lcc_operating_mode_t *mode) {
+  if (mode_name == NULL || mode == NULL) {
+    return LCC_ERR_INVALID_ARGUMENT;
   }
   if (strcmp(mode_name, "gaming") == 0) {
-    return "gaming";
+    *mode = LCC_MODE_GAMING;
+    return LCC_OK;
   }
   if (strcmp(mode_name, "office") == 0) {
-    return "office";
+    *mode = LCC_MODE_OFFICE;
+    return LCC_OK;
   }
   if (strcmp(mode_name, "turbo") == 0) {
-    return "turbo";
+    *mode = LCC_MODE_TURBO;
+    return LCC_OK;
   }
   if (strcmp(mode_name, "custom") == 0) {
-    return "custom";
+    *mode = LCC_MODE_CUSTOM;
+    return LCC_OK;
   }
 
-  return NULL;
+  return LCC_ERR_PARSE;
 }
 
 static lcc_status_t load_text_file(const char *path, char *buffer,
@@ -87,27 +92,9 @@ static lcc_status_t load_text_file(const char *path, char *buffer,
   return LCC_OK;
 }
 
-static void set_default_state(lcc_manager_t *manager) {
-  (void)snprintf(manager->requested_profile, sizeof(manager->requested_profile),
-                 "%s", "balanced");
-  (void)snprintf(manager->effective_profile, sizeof(manager->effective_profile),
-                 "%s", "balanced");
-  (void)snprintf(manager->requested_fan_table,
-                 sizeof(manager->requested_fan_table), "%s", "M4T1");
-  (void)snprintf(manager->effective_fan_table,
-                 sizeof(manager->effective_fan_table), "%s", "M4T1");
-}
-
 static void set_default_capabilities(lcc_manager_t *manager) {
   (void)snprintf(manager->capabilities_json, sizeof(manager->capabilities_json),
                  "%s", fallback_capabilities_json());
-}
-
-static void merge_power_limit(lcc_optional_byte_t *target,
-                              lcc_optional_byte_t source) {
-  if (target != NULL && source.present) {
-    *target = source;
-  }
 }
 
 static lcc_status_t init_capabilities(lcc_manager_t *manager,
@@ -133,42 +120,67 @@ static lcc_status_t init_capabilities(lcc_manager_t *manager,
 }
 
 static int append_power_json(char *buffer, size_t buffer_len,
-                             const lcc_power_limits_t *limits, bool present) {
-  if (!present) {
+                             const lcc_state_target_t *target) {
+  if (target == NULL || !target->has_power_limits) {
     return snprintf(buffer, buffer_len, "null");
   }
 
   return snprintf(buffer, buffer_len,
                   "{\"pl1\":%u,\"pl2\":%u,\"pl4\":%u,\"tcc_offset\":%u}",
-                  (unsigned int)limits->pl1.value,
-                  (unsigned int)limits->pl2.value,
-                  (unsigned int)limits->pl4.value,
-                  (unsigned int)limits->tcc_offset.value);
+                  (unsigned int)target->power_limits.pl1.value,
+                  (unsigned int)target->power_limits.pl2.value,
+                  (unsigned int)target->power_limits.pl4.value,
+                  (unsigned int)target->power_limits.tcc_offset.value);
 }
 
-lcc_status_t lcc_manager_init(lcc_manager_t *manager,
-                              const char *capabilities_path) {
-  lcc_power_limits_t defaults;
+static void fill_backend_name(lcc_manager_t *manager) {
+  if (manager->state_cache.backend_name[0] == '\0') {
+    (void)snprintf(manager->state_cache.backend_name,
+                   sizeof(manager->state_cache.backend_name), "%s",
+                   lcc_backend_name(manager->backend));
+  }
+}
+
+static lcc_status_t refresh_state(lcc_manager_t *manager) {
+  lcc_backend_result_t result;
   lcc_status_t status = LCC_OK;
 
-  if (manager == NULL) {
+  if (manager == NULL || manager->backend == NULL) {
+    return LCC_ERR_INVALID_ARGUMENT;
+  }
+
+  status = lcc_backend_read_state(manager->backend, &manager->state_cache,
+                                  &result);
+  if (status != LCC_OK) {
+    return status;
+  }
+
+  if (result.hardware_write) {
+    manager->state_cache.hardware_write = true;
+  }
+  fill_backend_name(manager);
+  return LCC_OK;
+}
+
+lcc_status_t lcc_manager_init(lcc_manager_t *manager, lcc_backend_t *backend,
+                              const char *capabilities_path) {
+  lcc_backend_result_t result;
+  lcc_status_t status = LCC_OK;
+
+  if (manager == NULL || backend == NULL) {
     return LCC_ERR_INVALID_ARGUMENT;
   }
 
   memset(manager, 0, sizeof(*manager));
-  set_default_state(manager);
+  manager->backend = backend;
 
-  memset(&defaults, 0, sizeof(defaults));
-  defaults.pl1.present = true;
-  defaults.pl1.value = 55u;
-  defaults.pl2.present = true;
-  defaults.pl2.value = 95u;
-  defaults.pl4.present = true;
-  defaults.pl4.value = 125u;
-  defaults.tcc_offset.present = true;
-  defaults.tcc_offset.value = 10u;
+  status = lcc_backend_probe(manager->backend, &manager->backend_capabilities,
+                             &result);
+  if (status != LCC_OK) {
+    return status;
+  }
 
-  status = lcc_manager_set_power_limits(manager, &defaults);
+  status = refresh_state(manager);
   if (status != LCC_OK) {
     return status;
   }
@@ -197,11 +209,9 @@ lcc_status_t lcc_manager_get_state_json(const lcc_manager_t *manager,
   }
 
   requested_written = append_power_json(requested_power, sizeof(requested_power),
-                                        &manager->requested_power,
-                                        manager->has_requested_power);
+                                        &manager->state_cache.requested);
   effective_written = append_power_json(effective_power, sizeof(effective_power),
-                                        &manager->effective_power,
-                                        manager->has_effective_power);
+                                        &manager->state_cache.effective);
   if (requested_written < 0 || effective_written < 0) {
     return LCC_ERR_IO;
   }
@@ -210,13 +220,16 @@ lcc_status_t lcc_manager_get_state_json(const lcc_manager_t *manager,
       buffer, buffer_len,
       "{"
       "\"service\":\"lccd\","
-      "\"backend\":\"daemon-scaffold\","
-      "\"hardware_write\":false,"
+      "\"backend\":\"%s\","
+      "\"hardware_write\":%s,"
       "\"requested\":{\"profile\":\"%s\",\"fan_table\":\"%s\",\"power\":%s},"
       "\"effective\":{\"profile\":\"%s\",\"fan_table\":\"%s\",\"power\":%s}"
       "}",
-      manager->requested_profile, manager->requested_fan_table, requested_power,
-      manager->effective_profile, manager->effective_fan_table, effective_power);
+      manager->state_cache.backend_name,
+      manager->state_cache.hardware_write ? "true" : "false",
+      manager->state_cache.requested.profile, manager->state_cache.requested.fan_table,
+      requested_power, manager->state_cache.effective.profile,
+      manager->state_cache.effective.fan_table, effective_power);
   if (written < 0 || (size_t)written >= buffer_len) {
     return LCC_ERR_BUFFER_TOO_SMALL;
   }
@@ -226,24 +239,54 @@ lcc_status_t lcc_manager_get_state_json(const lcc_manager_t *manager,
 
 lcc_status_t lcc_manager_get_thermal_json(const lcc_manager_t *manager,
                                           char *buffer, size_t buffer_len) {
+  char cpu_temp[32];
+  char gpu_temp[32];
+  char cpu_fan[32];
+  char gpu_fan[32];
   int written = 0;
 
   if (manager == NULL || buffer == NULL || buffer_len == 0u) {
     return LCC_ERR_INVALID_ARGUMENT;
   }
 
+  if (manager->state_cache.thermal.has_cpu_temp_c) {
+    (void)snprintf(cpu_temp, sizeof(cpu_temp), "%u",
+                   (unsigned int)manager->state_cache.thermal.cpu_temp_c);
+  } else {
+    (void)snprintf(cpu_temp, sizeof(cpu_temp), "%s", "null");
+  }
+  if (manager->state_cache.thermal.has_gpu_temp_c) {
+    (void)snprintf(gpu_temp, sizeof(gpu_temp), "%u",
+                   (unsigned int)manager->state_cache.thermal.gpu_temp_c);
+  } else {
+    (void)snprintf(gpu_temp, sizeof(gpu_temp), "%s", "null");
+  }
+  if (manager->state_cache.thermal.has_cpu_fan_rpm) {
+    (void)snprintf(cpu_fan, sizeof(cpu_fan), "%u",
+                   (unsigned int)manager->state_cache.thermal.cpu_fan_rpm);
+  } else {
+    (void)snprintf(cpu_fan, sizeof(cpu_fan), "%s", "null");
+  }
+  if (manager->state_cache.thermal.has_gpu_fan_rpm) {
+    (void)snprintf(gpu_fan, sizeof(gpu_fan), "%u",
+                   (unsigned int)manager->state_cache.thermal.gpu_fan_rpm);
+  } else {
+    (void)snprintf(gpu_fan, sizeof(gpu_fan), "%s", "null");
+  }
+
   written = snprintf(
       buffer, buffer_len,
       "{"
       "\"service\":\"lccd\","
-      "\"source\":\"daemon-scaffold\","
+      "\"source\":\"%s\","
       "\"profile\":\"%s\","
-      "\"cpu_temp_c\":null,"
-      "\"gpu_temp_c\":null,"
-      "\"cpu_fan_rpm\":null,"
-      "\"gpu_fan_rpm\":null"
+      "\"cpu_temp_c\":%s,"
+      "\"gpu_temp_c\":%s,"
+      "\"cpu_fan_rpm\":%s,"
+      "\"gpu_fan_rpm\":%s"
       "}",
-      manager->effective_profile);
+      manager->state_cache.backend_name, manager->state_cache.effective.profile,
+      cpu_temp, gpu_temp, cpu_fan, gpu_fan);
   if (written < 0 || (size_t)written >= buffer_len) {
     return LCC_ERR_BUFFER_TOO_SMALL;
   }
@@ -253,68 +296,69 @@ lcc_status_t lcc_manager_get_thermal_json(const lcc_manager_t *manager,
 
 lcc_status_t lcc_manager_set_mode(lcc_manager_t *manager,
                                   const char *mode_name) {
-  const char *canonical_name = NULL;
+  lcc_backend_result_t result;
+  lcc_operating_mode_t mode = LCC_MODE_OFFICE;
+  lcc_status_t status = LCC_OK;
 
   if (manager == NULL || mode_name == NULL) {
     return LCC_ERR_INVALID_ARGUMENT;
   }
 
-  canonical_name = canonical_mode_name(mode_name);
-  if (canonical_name == NULL) {
-    return LCC_ERR_PARSE;
+  status = mode_from_name(mode_name, &mode);
+  if (status != LCC_OK) {
+    return status;
   }
 
-  return lcc_manager_set_profile(manager, canonical_name);
+  status = lcc_backend_apply_mode(manager->backend, mode, &result);
+  if (status != LCC_OK) {
+    return status;
+  }
+
+  return refresh_state(manager);
 }
 
 lcc_status_t lcc_manager_set_profile(lcc_manager_t *manager,
                                      const char *profile_name) {
-  int written = 0;
+  lcc_backend_result_t result;
+  lcc_status_t status = LCC_OK;
 
   if (manager == NULL || !name_is_safe(profile_name)) {
     return LCC_ERR_INVALID_ARGUMENT;
   }
 
-  written = snprintf(manager->requested_profile,
-                     sizeof(manager->requested_profile), "%s", profile_name);
-  if (written < 0 || (size_t)written >= sizeof(manager->requested_profile)) {
-    return LCC_ERR_BUFFER_TOO_SMALL;
+  status = lcc_backend_apply_profile(manager->backend, profile_name, &result);
+  if (status == LCC_ERR_NOT_SUPPORTED) {
+    return lcc_manager_set_mode(manager, profile_name);
+  }
+  if (status != LCC_OK) {
+    return status;
   }
 
-  written = snprintf(manager->effective_profile,
-                     sizeof(manager->effective_profile), "%s", profile_name);
-  if (written < 0 || (size_t)written >= sizeof(manager->effective_profile)) {
-    return LCC_ERR_BUFFER_TOO_SMALL;
-  }
-
-  return LCC_OK;
+  return refresh_state(manager);
 }
 
 lcc_status_t lcc_manager_apply_fan_table(lcc_manager_t *manager,
                                          const char *table_name) {
-  int written = 0;
+  lcc_backend_result_t result;
+  lcc_status_t status = LCC_OK;
 
   if (manager == NULL || !name_is_safe(table_name)) {
     return LCC_ERR_INVALID_ARGUMENT;
   }
 
-  written = snprintf(manager->requested_fan_table,
-                     sizeof(manager->requested_fan_table), "%s", table_name);
-  if (written < 0 || (size_t)written >= sizeof(manager->requested_fan_table)) {
-    return LCC_ERR_BUFFER_TOO_SMALL;
+  status = lcc_backend_apply_fan_table(manager->backend, table_name, &result);
+  if (status != LCC_OK) {
+    return status;
   }
 
-  written = snprintf(manager->effective_fan_table,
-                     sizeof(manager->effective_fan_table), "%s", table_name);
-  if (written < 0 || (size_t)written >= sizeof(manager->effective_fan_table)) {
-    return LCC_ERR_BUFFER_TOO_SMALL;
-  }
-
-  return LCC_OK;
+  return refresh_state(manager);
 }
 
 lcc_status_t lcc_manager_set_power_limits(lcc_manager_t *manager,
                                           const lcc_power_limits_t *limits) {
+  lcc_backend_result_t result;
+  lcc_status_t status = LCC_OK;
+
   if (manager == NULL || limits == NULL) {
     return LCC_ERR_INVALID_ARGUMENT;
   }
@@ -323,13 +367,10 @@ lcc_status_t lcc_manager_set_power_limits(lcc_manager_t *manager,
     return LCC_ERR_INVALID_ARGUMENT;
   }
 
-  merge_power_limit(&manager->requested_power.pl1, limits->pl1);
-  merge_power_limit(&manager->requested_power.pl2, limits->pl2);
-  merge_power_limit(&manager->requested_power.pl4, limits->pl4);
-  merge_power_limit(&manager->requested_power.tcc_offset, limits->tcc_offset);
-  manager->has_requested_power = true;
+  status = lcc_backend_apply_power_limits(manager->backend, limits, &result);
+  if (status != LCC_OK) {
+    return status;
+  }
 
-  manager->effective_power = manager->requested_power;
-  manager->has_effective_power = true;
-  return LCC_OK;
+  return refresh_state(manager);
 }
