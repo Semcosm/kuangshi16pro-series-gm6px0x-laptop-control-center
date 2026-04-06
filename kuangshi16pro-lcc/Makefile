@@ -26,6 +26,7 @@ COMMON_SRCS := \
 	$(SRC_DIR)/common/lcc_log.c \
 	$(SRC_DIR)/backends/backend.c \
 	$(SRC_DIR)/backends/amw0/backend.c \
+	$(SRC_DIR)/backends/converged/backend.c \
 	$(SRC_DIR)/backends/amw0/transport.c \
 	$(SRC_DIR)/backends/amw0/wmbc-pack.c \
 	$(SRC_DIR)/backends/amw0/ec-addr-map.c \
@@ -94,6 +95,7 @@ TEST_SRCS := \
 	$(SRC_DIR)/daemon/manager.c \
 	$(SRC_DIR)/daemon/transaction.c \
 	$(TEST_DIR)/unit/test_backend_amw0.c \
+	$(TEST_DIR)/unit/test_backend_converged.c \
 	$(TEST_DIR)/unit/test_backend_standard.c \
 	$(TEST_DIR)/unit/test_backend_mock.c \
 	$(TEST_DIR)/unit/test_profiles.c \

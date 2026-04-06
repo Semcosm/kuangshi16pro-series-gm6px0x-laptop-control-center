@@ -6,6 +6,7 @@
 
 void lcc_run_backend_mock_tests(void);
 void lcc_run_backend_amw0_tests(void);
+void lcc_run_backend_converged_tests(void);
 void lcc_run_backend_standard_tests(void);
 void lcc_run_manager_tests(void);
 void lcc_run_transaction_tests(void);
@@ -128,7 +129,7 @@ int main(void) {
   test_fan_table_json_fixture_load();
   lcc_run_backend_mock_tests();
   lcc_run_backend_amw0_tests();
-  lcc_run_backend_standard_tests();
+  lcc_run_backend_converged_tests();
   lcc_run_manager_tests();
   lcc_run_transaction_tests();
   return 0;

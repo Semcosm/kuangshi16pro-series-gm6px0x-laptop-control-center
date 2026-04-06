@@ -33,10 +33,15 @@ static lcc_status_t init_capabilities(lcc_manager_t *manager,
                                       const char *capabilities_path) {
   size_t index = 0;
   lcc_status_t status = LCC_OK;
+  const char *backend_selected = NULL;
+
+  backend_selected = manager->state_cache.backend_selected[0] != '\0'
+                         ? manager->state_cache.backend_selected
+                         : lcc_backend_name(manager->backend);
 
   if (capabilities_path != NULL) {
     status = lcc_capabilities_detect_json(
-        manager->backend, &manager->backend_capabilities, capabilities_path,
+        backend_selected, &manager->backend_capabilities, capabilities_path,
         manager->capabilities_json, sizeof(manager->capabilities_json));
     if (status != LCC_OK) {
       set_default_capabilities(manager);
@@ -51,7 +56,7 @@ static lcc_status_t init_capabilities(lcc_manager_t *manager,
        index < sizeof(default_capability_paths) / sizeof(default_capability_paths[0]);
        ++index) {
     status = lcc_capabilities_detect_json(
-        manager->backend, &manager->backend_capabilities,
+        backend_selected, &manager->backend_capabilities,
         default_capability_paths[index], manager->capabilities_json,
         sizeof(manager->capabilities_json));
     if (status == LCC_OK) {

@@ -7,7 +7,7 @@
 #include "lcc/error.h"
 
 lcc_status_t lcc_capabilities_detect_json(
-    const lcc_backend_t *backend,
+    const char *backend_selected,
     const lcc_backend_capabilities_t *backend_capabilities,
     const char *capabilities_path, char *buffer, size_t buffer_len);
 

@@ -21,6 +21,9 @@ static void test_transaction_happy_path(void) {
   assert(!manager.state_cache.transaction.has_pending_target);
   assert(strcmp(manager.state_cache.requested.profile, "turbo") == 0);
   assert(strcmp(manager.state_cache.effective.profile, "turbo") == 0);
+  assert(manager.state_cache.last_apply.has_target);
+  assert(strcmp(manager.state_cache.last_apply.target.profile, "turbo") == 0);
+  assert(manager.state_cache.last_apply.error == LCC_OK);
 }
 
 static void test_transaction_failure_path(void) {
@@ -41,6 +44,9 @@ static void test_transaction_failure_path(void) {
   assert(strcmp(manager.state_cache.transaction.pending_target.profile,
                 "turbo") == 0);
   assert(manager.state_cache.transaction.last_error == LCC_ERR_IO);
+  assert(manager.state_cache.last_apply.has_target);
+  assert(strcmp(manager.state_cache.last_apply.target.profile, "turbo") == 0);
+  assert(manager.state_cache.last_apply.error == LCC_ERR_IO);
   assert(strcmp(manager.state_cache.effective.profile, "balanced") == 0);
   assert(strcmp(manager.state_cache.requested.profile, "balanced") == 0);
 }

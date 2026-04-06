@@ -11,6 +11,7 @@
 #define LCC_STATE_BACKEND_NAME_MAX 32u
 #define LCC_STATE_OPERATION_MAX 32u
 #define LCC_STATE_STAGE_MAX 96u
+#define LCC_STATE_REASON_MAX 192u
 
 typedef struct {
   char profile[LCC_STATE_NAME_MAX];
@@ -46,10 +47,29 @@ typedef struct {
 } lcc_transaction_snapshot_t;
 
 typedef struct {
+  char read_state[LCC_STATE_BACKEND_NAME_MAX];
+  char apply_profile[LCC_STATE_BACKEND_NAME_MAX];
+  char apply_mode[LCC_STATE_BACKEND_NAME_MAX];
+  char apply_power_limits[LCC_STATE_BACKEND_NAME_MAX];
+  char apply_fan_table[LCC_STATE_BACKEND_NAME_MAX];
+} lcc_execution_snapshot_t;
+
+typedef struct {
+  char stage[LCC_STATE_STAGE_MAX];
+  bool has_target;
+  lcc_state_target_t target;
+  lcc_status_t error;
+} lcc_last_apply_snapshot_t;
+
+typedef struct {
   char backend_name[LCC_STATE_BACKEND_NAME_MAX];
+  char backend_selected[LCC_STATE_BACKEND_NAME_MAX];
+  char backend_fallback_reason[LCC_STATE_REASON_MAX];
+  lcc_execution_snapshot_t execution;
   bool hardware_write;
   lcc_state_target_t requested;
   lcc_state_target_t effective;
+  lcc_last_apply_snapshot_t last_apply;
   lcc_transaction_snapshot_t transaction;
   lcc_thermal_state_t thermal;
 } lcc_state_snapshot_t;

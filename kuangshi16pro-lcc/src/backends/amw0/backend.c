@@ -121,6 +121,9 @@ static void seed_shadow_state(lcc_amw0_backend_t *amw0) {
   memset(&amw0->shadow_state, 0, sizeof(amw0->shadow_state));
   (void)copy_name(amw0->shadow_state.backend_name,
                   sizeof(amw0->shadow_state.backend_name), "amw0");
+  (void)copy_name(amw0->shadow_state.backend_selected,
+                  sizeof(amw0->shadow_state.backend_selected), "amw0");
+  (void)lcc_backend_execution_set_all(&amw0->shadow_state.execution, "amw0");
   (void)copy_name(amw0->shadow_state.requested.profile,
                   sizeof(amw0->shadow_state.requested.profile), "office");
   (void)copy_name(amw0->shadow_state.effective.profile,
@@ -234,6 +237,8 @@ static lcc_status_t amw0_read_state(void *ctx, lcc_state_snapshot_t *state,
 
   *state = amw0->shadow_state;
   (void)copy_name(state->backend_name, sizeof(state->backend_name), "amw0");
+  (void)lcc_backend_state_set_metadata(state, "amw0", "amw0", NULL,
+                                       &amw0->shadow_state.execution);
 
   if (amw0->transport.dry_run) {
     lcc_backend_result_reset(result);

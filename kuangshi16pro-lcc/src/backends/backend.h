@@ -1,6 +1,8 @@
 #ifndef LCC_BACKENDS_BACKEND_H
 #define LCC_BACKENDS_BACKEND_H
 
+#include <stddef.h>
+
 #include "backends/amw0/transport.h"
 #include "lcc/backend.h"
 
@@ -24,6 +26,22 @@ void lcc_mock_backend_fail_next_power(lcc_mock_backend_t *mock,
                                       lcc_status_t status);
 void lcc_mock_backend_fail_next_fan(lcc_mock_backend_t *mock,
                                     lcc_status_t status);
+
+lcc_status_t lcc_backend_copy_text(char *buffer, size_t buffer_len,
+                                   const char *value);
+void lcc_backend_execution_clear(lcc_execution_snapshot_t *execution);
+lcc_status_t lcc_backend_execution_set(lcc_execution_snapshot_t *execution,
+                                       const char *read_state,
+                                       const char *apply_profile,
+                                       const char *apply_mode,
+                                       const char *apply_power_limits,
+                                       const char *apply_fan_table);
+lcc_status_t lcc_backend_execution_set_all(lcc_execution_snapshot_t *execution,
+                                           const char *backend_name);
+lcc_status_t lcc_backend_state_set_metadata(
+    lcc_state_snapshot_t *state, const char *backend_name,
+    const char *backend_selected, const char *fallback_reason,
+    const lcc_execution_snapshot_t *execution);
 
 typedef struct {
   char root[256];
@@ -57,8 +75,31 @@ lcc_status_t lcc_amw0_backend_init(lcc_amw0_backend_t *amw0,
 void lcc_amw0_backend_fail_after_writes(lcc_amw0_backend_t *amw0,
                                         size_t write_count);
 
+typedef struct {
+  lcc_backend_t *standard_backend;
+  lcc_backend_t *amw0_backend;
+  bool standard_available;
+  bool amw0_available;
+  lcc_status_t standard_status;
+  lcc_status_t amw0_status;
+  lcc_backend_capabilities_t standard_capabilities;
+  lcc_backend_capabilities_t amw0_capabilities;
+  lcc_execution_snapshot_t execution;
+  char backend_selected[LCC_STATE_BACKEND_NAME_MAX];
+  char backend_fallback_reason[LCC_STATE_REASON_MAX];
+} lcc_converged_backend_t;
+
+lcc_status_t lcc_converged_backend_init(
+    lcc_converged_backend_t *converged, lcc_backend_t *backend,
+    lcc_backend_t *standard_backend, lcc_status_t standard_status,
+    const lcc_backend_capabilities_t *standard_capabilities,
+    lcc_backend_t *amw0_backend, lcc_status_t amw0_status,
+    const lcc_backend_capabilities_t *amw0_capabilities);
+
 extern const lcc_backend_ops_t lcc_mock_backend_ops;
 extern const lcc_backend_ops_t lcc_standard_backend_ops;
 extern const lcc_backend_ops_t lcc_amw0_backend_ops;
+extern const lcc_backend_ops_t lcc_converged_standard_backend_ops;
+extern const lcc_backend_ops_t lcc_converged_amw0_backend_ops;
 
 #endif

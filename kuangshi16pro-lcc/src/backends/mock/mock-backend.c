@@ -84,6 +84,8 @@ static lcc_status_t mock_read_state(void *ctx, lcc_state_snapshot_t *state,
   }
 
   *state = mock->state;
+  (void)lcc_backend_state_set_metadata(state, "mock", "mock", NULL,
+                                       &mock->state.execution);
   lcc_backend_result_reset(result);
   return LCC_OK;
 }
@@ -243,6 +245,9 @@ void lcc_mock_backend_seed_defaults(lcc_mock_backend_t *mock) {
 
   (void)copy_name(mock->state.backend_name, sizeof(mock->state.backend_name),
                   "mock");
+  (void)copy_name(mock->state.backend_selected,
+                  sizeof(mock->state.backend_selected), "mock");
+  (void)lcc_backend_execution_set_all(&mock->state.execution, "mock");
   (void)copy_name(mock->state.requested.profile,
                   sizeof(mock->state.requested.profile), "balanced");
   (void)copy_name(mock->state.effective.profile,

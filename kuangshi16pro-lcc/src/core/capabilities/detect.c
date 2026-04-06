@@ -123,14 +123,15 @@ static void apply_json_overrides(const char *json, lcc_model_map_t *map) {
 }
 
 lcc_status_t lcc_capabilities_detect_json(
-    const lcc_backend_t *backend,
+    const char *backend_selected,
     const lcc_backend_capabilities_t *backend_capabilities,
     const char *capabilities_path, char *buffer, size_t buffer_len) {
   lcc_model_map_t model_map;
   char file_json[2048];
   int written = 0;
 
-  if (backend == NULL || backend_capabilities == NULL || buffer == NULL ||
+  if (backend_selected == NULL || backend_selected[0] == '\0' ||
+      backend_capabilities == NULL || buffer == NULL ||
       buffer_len == 0u) {
     return LCC_ERR_INVALID_ARGUMENT;
   }
@@ -155,7 +156,7 @@ lcc_status_t lcc_capabilities_detect_json(
       "\"features\":{\"fan_table_1p5\":%s,\"smart_apc\":%s,"
       "\"gpu_mux\":\"%s\",\"needs_reboot_for_mux\":%s}"
       "}",
-      model_map.model, lcc_backend_name(backend),
+      model_map.model, backend_selected,
       backend_capabilities->can_read_state ? "true" : "false",
       backend_capabilities->can_apply_profile ? "true" : "false",
       backend_capabilities->can_apply_mode ? "true" : "false",

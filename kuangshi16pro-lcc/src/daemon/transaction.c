@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "common/lcc_log.h"
 #include "core/state/reader.h"
 
 static bool name_is_safe(const char *text) {
@@ -97,6 +98,131 @@ static const char *transaction_operation_name(lcc_transaction_kind_t kind) {
   return "unknown";
 }
 
+static void append_text_field(char *buffer, size_t buffer_len, bool *first,
+                              const char *label, const char *value) {
+  size_t used = 0;
+
+  if (buffer == NULL || buffer_len == 0u || first == NULL || label == NULL ||
+      label[0] == '\0' || value == NULL || value[0] == '\0') {
+    return;
+  }
+
+  used = strlen(buffer);
+  if (used >= buffer_len - 1u) {
+    return;
+  }
+
+  (void)snprintf(buffer + used, buffer_len - used, "%s%s=%s",
+                 *first ? "" : " ", label, value);
+  *first = false;
+}
+
+static void append_optional_limit(char *buffer, size_t buffer_len, bool *first,
+                                  const char *label,
+                                  lcc_optional_byte_t value) {
+  char number[32];
+
+  if (!value.present) {
+    return;
+  }
+
+  (void)snprintf(number, sizeof(number), "%u", (unsigned int)value.value);
+  append_text_field(buffer, buffer_len, first, label, number);
+}
+
+static void format_target_summary(const lcc_state_target_t *target, char *buffer,
+                                  size_t buffer_len) {
+  bool first = true;
+
+  if (buffer == NULL || buffer_len == 0u) {
+    return;
+  }
+
+  buffer[0] = '\0';
+  if (target == NULL) {
+    (void)snprintf(buffer, buffer_len, "none");
+    return;
+  }
+
+  append_text_field(buffer, buffer_len, &first, "profile", target->profile);
+  append_text_field(buffer, buffer_len, &first, "fan_table", target->fan_table);
+  if (target->has_power_limits) {
+    append_optional_limit(buffer, buffer_len, &first, "pl1",
+                          target->power_limits.pl1);
+    append_optional_limit(buffer, buffer_len, &first, "pl2",
+                          target->power_limits.pl2);
+    append_optional_limit(buffer, buffer_len, &first, "pl4",
+                          target->power_limits.pl4);
+    append_optional_limit(buffer, buffer_len, &first, "tcc_offset",
+                          target->power_limits.tcc_offset);
+  }
+  if (first) {
+    (void)snprintf(buffer, buffer_len, "none");
+  }
+}
+
+static void last_apply_begin(lcc_manager_t *manager,
+                             const lcc_state_target_t *pending_target) {
+  if (manager == NULL || pending_target == NULL) {
+    return;
+  }
+
+  manager->state_cache.last_apply.stage[0] = '\0';
+  manager->state_cache.last_apply.has_target = true;
+  manager->state_cache.last_apply.target = *pending_target;
+  manager->state_cache.last_apply.error = LCC_OK;
+}
+
+static void last_apply_update_stage(lcc_manager_t *manager,
+                                    const char *stage_name) {
+  if (manager == NULL) {
+    return;
+  }
+
+  if (stage_name != NULL && stage_name[0] != '\0') {
+    (void)copy_name(manager->state_cache.last_apply.stage,
+                    sizeof(manager->state_cache.last_apply.stage), stage_name);
+  } else {
+    manager->state_cache.last_apply.stage[0] = '\0';
+  }
+}
+
+static void log_transaction_event(const char *level,
+                                  const char *operation_name,
+                                  const char *stage_name,
+                                  const lcc_state_target_t *target,
+                                  lcc_status_t status) {
+  char target_summary[256];
+
+  if (operation_name == NULL || level == NULL) {
+    return;
+  }
+
+  format_target_summary(target, target_summary, sizeof(target_summary));
+  if (strcmp(level, "error") == 0) {
+    lcc_log_error("transaction operation=%s stage=%s status=%s target=%s",
+                  operation_name,
+                  (stage_name != NULL && stage_name[0] != '\0') ? stage_name
+                                                                : "none",
+                  lcc_status_string(status), target_summary);
+    return;
+  }
+  if (strcmp(level, "warn") == 0) {
+    lcc_log_warn("transaction operation=%s stage=%s status=%s target=%s",
+                 operation_name,
+                 (stage_name != NULL && stage_name[0] != '\0') ? stage_name
+                                                               : "none",
+                 lcc_status_string(status), target_summary);
+    return;
+  }
+
+  lcc_log_info("transaction operation=%s stage=%s status=%s target=%s",
+               operation_name,
+               (stage_name != NULL && stage_name[0] != '\0') ? stage_name
+                                                             : "none",
+               lcc_status_string(status), target_summary);
+}
+
 static void transaction_clear(lcc_manager_t *manager) {
   if (manager == NULL) {
     return;
@@ -132,6 +258,10 @@ static void transaction_fail(lcc_manager_t *manager, const char *operation_name,
   manager->state_cache.transaction.has_pending_target = true;
   manager->state_cache.transaction.pending_target = *pending_target;
   manager->state_cache.transaction.last_error = status;
+  manager->state_cache.last_apply.has_target = true;
+  manager->state_cache.last_apply.target = *pending_target;
+  manager->state_cache.last_apply.error = status;
+  last_apply_update_stage(manager, stage_name);
 }
 
 static lcc_status_t transaction_stage_target(
@@ -211,6 +341,7 @@ static void transaction_begin(lcc_manager_t *manager, const char *operation_name
   manager->state_cache.transaction.has_pending_target = true;
   manager->state_cache.transaction.pending_target = *pending_target;
   manager->state_cache.transaction.last_error = LCC_OK;
+  last_apply_begin(manager, pending_target);
 }
 
 static lcc_status_t transaction_apply(lcc_manager_t *manager,
@@ -284,16 +415,21 @@ lcc_status_t lcc_transaction_execute(lcc_manager_t *manager,
   }
 
   transaction_begin(manager, operation_name, &pending_target);
+  log_transaction_event("info", operation_name, "begin", &pending_target,
+                        LCC_OK);
   status = transaction_apply(manager, request, resolved_mode, &result);
   if (result.stage[0] != '\0') {
     (void)copy_name(manager->state_cache.transaction.stage,
                     sizeof(manager->state_cache.transaction.stage),
                     result.stage);
+    last_apply_update_stage(manager, result.stage);
   }
   if (status != LCC_OK) {
     (void)lcc_transaction_refresh_state(manager);
     transaction_fail(manager, operation_name, result.stage, &pending_target,
                      status);
+    log_transaction_event("error", operation_name, result.stage, &pending_target,
+                          status);
     return status;
   }
 
@@ -301,12 +437,20 @@ lcc_status_t lcc_transaction_execute(lcc_manager_t *manager,
   if (status != LCC_OK) {
     transaction_fail(manager, operation_name, result.stage, &pending_target,
                      status);
+    log_transaction_event("error", operation_name, result.stage, &pending_target,
+                          status);
     return status;
   }
 
   if (result.hardware_write) {
     manager->state_cache.hardware_write = true;
   }
+  manager->state_cache.last_apply.has_target = true;
+  manager->state_cache.last_apply.target = pending_target;
+  manager->state_cache.last_apply.error = LCC_OK;
+  log_transaction_event("info", operation_name,
+                        result.stage[0] != '\0' ? result.stage : "complete",
+                        &pending_target, LCC_OK);
   transaction_clear(manager);
   return LCC_OK;
 }

@@ -73,6 +73,7 @@ static lcc_status_t standard_read_state(void *ctx, lcc_state_snapshot_t *state,
                                         lcc_backend_result_t *result) {
   lcc_standard_backend_t *standard = ctx;
   bool any_read = false;
+  lcc_execution_snapshot_t execution;
   lcc_status_t status = LCC_OK;
 
   if (standard == NULL || state == NULL) {
@@ -82,6 +83,16 @@ static lcc_status_t standard_read_state(void *ctx, lcc_state_snapshot_t *state,
   memset(state, 0, sizeof(*state));
   status = copy_name(state->backend_name, sizeof(state->backend_name),
                      "standard");
+  if (status != LCC_OK) {
+    return status;
+  }
+  status = lcc_backend_execution_set(&execution, "standard", "standard",
+                                     "standard", NULL, NULL);
+  if (status != LCC_OK) {
+    return status;
+  }
+  status = lcc_backend_state_set_metadata(state, "standard", "standard", NULL,
+                                          &execution);
   if (status != LCC_OK) {
     return status;
   }

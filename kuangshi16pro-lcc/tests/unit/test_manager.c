@@ -33,10 +33,14 @@ static void test_manager_profile_and_fan_updates(void) {
   assert(strstr(json, "\"profile\":\"turbo\"") != NULL);
   assert(strstr(json, "\"fan_table\":\"M4T1\"") != NULL);
   assert(strstr(json, "\"backend\":\"mock\"") != NULL);
+  assert(strstr(json, "\"backend_selected\":\"mock\"") != NULL);
+  assert(strstr(json, "\"execution\":{\"read_state\":\"mock\"") != NULL);
   assert(strstr(json, "\"support\"") != NULL);
   assert(strstr(json, "\"thermal\"") != NULL);
   assert(strstr(json, "\"cpu_fan_rpm\":2480") != NULL);
   assert(strstr(json, "\"gpu_temp_c\":56") != NULL);
+  assert(strstr(json, "\"last_apply_target\":{\"profile\":\"turbo\"") != NULL);
+  assert(strstr(json, "\"last_apply_error\":null") != NULL);
 }
 
 static void test_manager_power_update(void) {

@@ -22,6 +22,8 @@ void lcc_run_backend_mock_tests(void) {
   memset(&state, 0, sizeof(state));
   assert(lcc_backend_read_state(&backend, &state, &result) == LCC_OK);
   assert(strcmp(state.backend_name, "mock") == 0);
+  assert(strcmp(state.backend_selected, "mock") == 0);
+  assert(strcmp(state.execution.apply_mode, "mock") == 0);
   assert(strcmp(state.requested.profile, "balanced") == 0);
   assert(strcmp(state.effective.fan_table, "M4T1") == 0);
 

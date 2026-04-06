@@ -57,6 +57,8 @@ static void test_amw0_backend_dry_run_apply(void) {
   memset(&state, 0, sizeof(state));
   assert(lcc_backend_read_state(&backend, &state, &result) == LCC_OK);
   assert(strcmp(state.backend_name, "amw0") == 0);
+  assert(strcmp(state.backend_selected, "amw0") == 0);
+  assert(strcmp(state.execution.apply_power_limits, "amw0") == 0);
   assert(strcmp(state.effective.profile, "office") == 0);
 
   assert(lcc_backend_apply_mode(&backend, LCC_MODE_TURBO, &result) == LCC_OK);
