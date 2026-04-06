@@ -6,14 +6,15 @@ This roadmap keeps the Linux implementation aligned with the `GCUService` revers
 
 - PR1 completed
 - PR2 completed
-- PR3 completed, with the current minimal stable surface limited to `Manager`,
-  `Fan`, and `Power`; there is no standalone `Thermal` XML in the stable API
+- PR3 completed, with the D-Bus v1 stable surface intentionally limited to
+  `Manager`, `Fan`, and `Power`; there is no standalone `Thermal` XML in the
+  stable API
 - PR4 completed
 - PR5 completed
 - PR6 completed
 - PR7 completed
-- PR8 completed, with product commands fully clientized over D-Bus while
-  developer commands still keep a direct path
+- PR8 completed, with product-facing CLI commands running as pure D-Bus
+  clients while developer and admin debug commands still keep a direct path
 - PR9 completed in repository code and workflow definitions; GitHub-side branch
   protection and required-check configuration still need final manual
   confirmation in the repository settings

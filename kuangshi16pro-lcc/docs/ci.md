@@ -32,3 +32,17 @@ Suggested branch protection settings:
 3. Add the four checks listed above.
 4. Require branches to be up to date before merging.
 5. Optionally require pull requests and disallow direct pushes.
+
+Final manual confirmation on GitHub:
+
+1. Open the repository settings page for the `main` branch protection rule.
+2. Confirm the required checks appear with the exact names:
+   - `ci / lint`
+   - `ci / build`
+   - `ci / test`
+   - `ci / integration-smoke`
+3. Confirm the rule is enabled on `main`, not only drafted in workflow files.
+4. Confirm direct pushes are blocked if that is the intended policy.
+
+Repository code can define workflows and document the expected checks, but the
+actual protected-branch rule still has to be enabled and verified on GitHub.
