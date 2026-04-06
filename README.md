@@ -19,9 +19,9 @@ This repository focuses on three things:
   - `windows-control-center/`
   - `windows-control-center/GCUService_reverse_report.md`
 - Linux implementation work should go under:
-  - `linux-control-center/`
-  - `linux-control-center/docs/`
-  - `linux-control-center/fixtures/`
+  - `kuangshi16pro-lcc/`
+  - `kuangshi16pro-lcc/docs/`
+  - `kuangshi16pro-lcc/fixtures/`
 - legacy NBFC-compatible experiments are kept only as historical reference in:
   - `legacy-nbfc-configs/`
 
@@ -37,7 +37,7 @@ The top-level tools are grouped by transport or source:
   ACPI table collection helpers
 - `windows-control-center/*`
   vendor Windows package artifacts and capture helpers
-- `linux-control-center/*`
+- `kuangshi16pro-lcc/*`
   Linux control-center source tree
 
 This naming is intentional and currently consistent enough for a Git repository.
@@ -57,15 +57,15 @@ The only old `nbfc` naming was moved into `legacy-nbfc-configs/`.
   no-install Windows-side capture helper
 - `windows-control-center/GCUService_reverse_report.md`
   current highest-value Windows reverse target
-- `linux-control-center/docs/README.md`
+- `kuangshi16pro-lcc/docs/README.md`
   curated Linux implementation doc index
-- `linux-control-center/docs/implementation-model.md`
+- `kuangshi16pro-lcc/docs/implementation-model.md`
   Linux-side object model and feature split
-- `linux-control-center/docs/amw0-backend.md`
+- `kuangshi16pro-lcc/docs/amw0-backend.md`
   low-level AMW0 backend facts that are already proven
-- `linux-control-center/build/lccctl`
-  first C-based Linux CLI skeleton after `make -C linux-control-center`
-- `linux-control-center/fixtures/demo-profile.ini`
+- `kuangshi16pro-lcc/build/lccctl`
+  first C-based Linux CLI skeleton after `make -C kuangshi16pro-lcc`
+- `kuangshi16pro-lcc/fixtures/demo-profile.ini`
   sample config for staged `profile apply`
 
 ## Notes

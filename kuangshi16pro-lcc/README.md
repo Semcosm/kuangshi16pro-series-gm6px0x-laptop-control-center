@@ -1,4 +1,4 @@
-# Linux Control Center
+# Kuangshi16Pro LCC
 
 This directory is reserved for the Linux implementation of the laptop control center.
 
@@ -26,9 +26,9 @@ Start with:
 
 Build:
 
-- `make -C linux-control-center`
-- `make -C linux-control-center test`
-- `./linux-control-center/build/lccctl --help`
+- `make -C kuangshi16pro-lcc`
+- `make -C kuangshi16pro-lcc test`
+- `./kuangshi16pro-lcc/build/lccctl --help`
 
 Current CLI scope:
 
@@ -40,10 +40,10 @@ Current CLI scope:
 
 Config-driven examples:
 
-- `./linux-control-center/build/lccctl fan apply --file linux-control-center/fixtures/demo-fan.ini`
-- `./linux-control-center/build/lccctl profile apply --file linux-control-center/fixtures/demo-profile.ini`
-- `./linux-control-center/build/lccctl observe mode`
-- `./linux-control-center/build/lccctl observe all`
+- `./kuangshi16pro-lcc/build/lccctl fan apply --file kuangshi16pro-lcc/fixtures/demo-fan.ini`
+- `./kuangshi16pro-lcc/build/lccctl profile apply --file kuangshi16pro-lcc/fixtures/demo-profile.ini`
+- `./kuangshi16pro-lcc/build/lccctl observe mode`
+- `./kuangshi16pro-lcc/build/lccctl observe all`
 
 Current reverse-guided execution model:
 

@@ -15,5 +15,5 @@ windows-control-center/cc-capture-*/
 acpi-scan/
 windows-control-center/*.zip
 
-linux-control-center/build/
+kuangshi16pro-lcc/build/
 chen_record.txt
