@@ -50,6 +50,10 @@ APP_SRCS := \
 DAEMON_SRCS := \
 	$(COMMON_SRCS) \
 	$(SRC_DIR)/backends/mock/mock-backend.c \
+	$(SRC_DIR)/core/capabilities/detect.c \
+	$(SRC_DIR)/core/capabilities/model-map.c \
+	$(SRC_DIR)/core/state/model.c \
+	$(SRC_DIR)/core/state/reader.c \
 	$(SRC_DIR)/daemon/app.c \
 	$(SRC_DIR)/daemon/main.c \
 	$(SRC_DIR)/daemon/manager.c \
@@ -63,6 +67,8 @@ TEST_SRCS := \
 	$(SRC_DIR)/backends/mock/mock-backend.c \
 	$(SRC_DIR)/backends/amw0/transport.c \
 	$(SRC_DIR)/backends/amw0/wmbc-pack.c \
+	$(SRC_DIR)/core/capabilities/detect.c \
+	$(SRC_DIR)/core/capabilities/model-map.c \
 	$(SRC_DIR)/core/profile/plan.c \
 	$(SRC_DIR)/core/profile/mode-profile.c \
 	$(SRC_DIR)/core/profile/loader.c \
@@ -70,6 +76,8 @@ TEST_SRCS := \
 	$(SRC_DIR)/core/power/limits.c \
 	$(SRC_DIR)/core/fan/table.c \
 	$(SRC_DIR)/core/fan/table-apply.c \
+	$(SRC_DIR)/core/state/model.c \
+	$(SRC_DIR)/core/state/reader.c \
 	$(SRC_DIR)/daemon/manager.c \
 	$(SRC_DIR)/daemon/transaction.c \
 	$(TEST_DIR)/unit/test_backend_mock.c \

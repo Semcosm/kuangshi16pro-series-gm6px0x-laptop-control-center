@@ -13,6 +13,10 @@ static void test_manager_init_and_capabilities(void) {
   assert(lcc_manager_init(&manager, &backend, "data/capabilities/gm6px0x.json") ==
          LCC_OK);
   assert(strstr(lcc_manager_capabilities_json(&manager), "\"GM6PX0X\"") != NULL);
+  assert(strstr(lcc_manager_capabilities_json(&manager),
+                "\"backend_selected\":\"mock\"") != NULL);
+  assert(strstr(lcc_manager_capabilities_json(&manager),
+                "\"fan_table_1p5\":true") != NULL);
 }
 
 static void test_manager_profile_and_fan_updates(void) {
@@ -28,6 +32,11 @@ static void test_manager_profile_and_fan_updates(void) {
   assert(lcc_manager_get_state_json(&manager, json, sizeof(json)) == LCC_OK);
   assert(strstr(json, "\"profile\":\"turbo\"") != NULL);
   assert(strstr(json, "\"fan_table\":\"M4T1\"") != NULL);
+  assert(strstr(json, "\"backend\":\"mock\"") != NULL);
+  assert(strstr(json, "\"support\"") != NULL);
+  assert(strstr(json, "\"thermal\"") != NULL);
+  assert(strstr(json, "\"cpu_fan_rpm\":2480") != NULL);
+  assert(strstr(json, "\"gpu_temp_c\":56") != NULL);
 }
 
 static void test_manager_power_update(void) {

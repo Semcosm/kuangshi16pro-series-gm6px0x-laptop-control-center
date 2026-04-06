@@ -14,6 +14,7 @@ typedef struct {
   lcc_backend_t *backend;
   lcc_backend_capabilities_t backend_capabilities;
   lcc_state_snapshot_t state_cache;
+  char capabilities_path[256];
   char capabilities_json[LCC_MANAGER_JSON_MAX];
 } lcc_manager_t;
 

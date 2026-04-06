@@ -263,6 +263,14 @@ void lcc_mock_backend_seed_defaults(lcc_mock_backend_t *mock) {
   mock->state.requested.power_limits.tcc_offset.present = true;
   mock->state.requested.power_limits.tcc_offset.value = 10u;
   mock->state.effective.power_limits = mock->state.requested.power_limits;
+  mock->state.thermal.has_cpu_temp_c = true;
+  mock->state.thermal.cpu_temp_c = 61u;
+  mock->state.thermal.has_gpu_temp_c = true;
+  mock->state.thermal.gpu_temp_c = 56u;
+  mock->state.thermal.has_cpu_fan_rpm = true;
+  mock->state.thermal.cpu_fan_rpm = 2480u;
+  mock->state.thermal.has_gpu_fan_rpm = true;
+  mock->state.thermal.gpu_fan_rpm = 2310u;
 }
 
 lcc_status_t lcc_mock_backend_init(lcc_mock_backend_t *mock,

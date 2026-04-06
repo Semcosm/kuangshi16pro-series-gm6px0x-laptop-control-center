@@ -4,6 +4,8 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "core/state/reader.h"
+
 static bool name_is_safe(const char *text) {
   size_t index = 0;
 
@@ -236,9 +238,7 @@ static lcc_status_t transaction_apply(lcc_manager_t *manager,
 }
 
 lcc_status_t lcc_transaction_refresh_state(lcc_manager_t *manager) {
-  lcc_state_snapshot_t backend_state;
   lcc_transaction_snapshot_t transaction_state;
-  lcc_backend_result_t result;
   lcc_status_t status = LCC_OK;
 
   if (manager == NULL || manager->backend == NULL) {
@@ -246,21 +246,10 @@ lcc_status_t lcc_transaction_refresh_state(lcc_manager_t *manager) {
   }
 
   transaction_state = manager->state_cache.transaction;
-  memset(&backend_state, 0, sizeof(backend_state));
-  status = lcc_backend_read_state(manager->backend, &backend_state, &result);
+  status = lcc_state_reader_refresh(manager->backend, &manager->state_cache);
   if (status != LCC_OK) {
     return status;
   }
-
-  if (backend_state.backend_name[0] == '\0') {
-    (void)copy_name(backend_state.backend_name, sizeof(backend_state.backend_name),
-                    lcc_backend_name(manager->backend));
-  }
-  if (result.hardware_write) {
-    backend_state.hardware_write = true;
-  }
-
-  manager->state_cache = backend_state;
   manager->state_cache.transaction = transaction_state;
   return LCC_OK;
 }

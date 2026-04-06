@@ -30,7 +30,7 @@ void lcc_cli_print_usage(FILE *stream) {
                 "  lccctl state [--user-bus | --system-bus]\n"
                 "  lccctl status [--user-bus | --system-bus]\n"
                 "  lccctl capabilities [--user-bus | --system-bus]\n"
-                "  lccctl observe GROUP [--call-node PATH] [--ecrr-path PATH]\n"
+                "  lccctl observe GROUP [--user-bus | --system-bus]\n"
                 "  lccctl debug raw wmbc SLOT SAC1 SA00 SA01 SA02 SA03 "
                 "[--call-node PATH] [--dry-run]\n"
                 "  lccctl mode set MODE [--plan] [--user-bus | --system-bus]\n"
@@ -51,11 +51,12 @@ void lcc_cli_print_usage(FILE *stream) {
                 "Notes:\n"
                 "  state/status/capabilities and mode/power/fan/profile use "
                 "D-Bus by default.\n"
+                "  observe reads daemon state and does not touch AMW0 directly.\n"
                 "  --plan prints a staged local apply plan instead of calling "
                 "lccd.\n"
                 "  --user-bus is for development; system bus is the default.\n"
                 "  observe groups: mode, power, fan, thermal, all.\n"
-                "  observe and debug raw wmbc use the AMW0 backend directly.\n");
+                "  debug raw wmbc uses the AMW0 backend directly.\n");
 }
 
 int lcc_cli_exit_with_status(lcc_status_t status) {
