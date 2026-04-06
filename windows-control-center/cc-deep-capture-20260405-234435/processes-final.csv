@@ -1,0 +1,3 @@
+﻿"ProcessId","ParentProcessId","Name","ExecutablePath","CommandLine","CreationDate"
+"23508","1620","SystrayComponent.exe","C:\Program Files\WindowsApps\ControlCenter3_5.17.49.14_x64__wrbgcf7aesyd8\Win32\SystrayComponent.exe","""C:\Program Files\WindowsApps\ControlCenter3_5.17.49.14_x64__wrbgcf7aesyd8\Win32\SystrayComponent.exe"" ","2026/4/5 14:41:03"
+"22968","1780","GamingCenter3_Cross.exe","C:\Program Files\WindowsApps\ControlCenter3_5.17.49.14_x64__wrbgcf7aesyd8\GamingCenter3_Cross.exe","""C:\Program Files\WindowsApps\ControlCenter3_5.17.49.14_x64__wrbgcf7aesyd8\GamingCenter3_Cross.exe"" -ServerName:App.AppXnfwd5jme2fr1f8pm7849rvkkd1jdp0hf.mca","2026/4/5 23:44:46"
