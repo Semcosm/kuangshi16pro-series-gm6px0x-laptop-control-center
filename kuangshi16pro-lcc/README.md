@@ -9,7 +9,7 @@ Layout:
 - `src/dbus/`: D-Bus server and introspection XML
 - `src/core/`: backend-agnostic profile, fan, power, state, and capability logic
 - `src/backends/`: standard Linux ABI backends first, AMW0 fallback second
-- `src/cli/`: operator-facing CLI, intended to become a D-Bus client
+- `src/cli/`: operator-facing CLI, now preferring D-Bus for product-facing commands
 - `include/lcc/`: public project headers
 - `docs/`: architecture notes and reverse-guided implementation docs
 - `data/`: imported OEM presets, fan tables, and model capability maps
@@ -39,16 +39,20 @@ Build:
 
 Current CLI scope:
 
-- `status`: read `WQAC`, `_WED(D2)`, and probe `ECRR`
+- `state` / `status`: read daemon state over D-Bus
+- `capabilities`: read daemon capabilities over D-Bus
 - `observe`: grouped reads for `mode`, `power`, `fan`, `thermal`, or `all`
   mode and thermal groups also print a decoded summary for the currently observed bytes
-- `raw wmbc`: send a traced `WMBC(..., 0x04, buffer)` packet
-- `mode set`, `power set`, `fan apply`, `profile apply`: build and print a staged EC plan
+- `debug raw wmbc`: send a traced `WMBC(..., 0x04, buffer)` packet
+- `mode set`, `power set`, `fan apply`, `profile apply`: call `lccd` over D-Bus by default
+- `--plan`: print the local staged plan instead of calling D-Bus
 
 Config-driven examples:
 
 - `./kuangshi16pro-lcc/build/lccctl fan apply --file kuangshi16pro-lcc/tests/fixtures/demo-fan.ini`
 - `./kuangshi16pro-lcc/build/lccctl profile apply --file kuangshi16pro-lcc/tests/fixtures/demo-profile.ini`
+- `./kuangshi16pro-lcc/build/lccctl state --user-bus`
+- `./kuangshi16pro-lcc/build/lccctl mode set turbo --user-bus`
 - `./kuangshi16pro-lcc/build/lccctl observe mode`
 - `./kuangshi16pro-lcc/build/lccctl observe all`
 
@@ -57,10 +61,10 @@ Current phase:
 - `src/core/` already owns the staged profile/fan/power planning logic
 - `src/backends/amw0/` now owns transport, packet formatting, EC address maps,
   and decode helpers
-- `src/cli/` has been split into command-specific files
+- `src/cli/` has been split into command-specific files and now prefers D-Bus
 - `src/daemon/` and `src/dbus/` now build into a minimal `lccd` that exposes
-  `GetCapabilities`, `GetState`, `SetProfile`, `ApplyFanTable`, and
-  `SetPowerLimits` over D-Bus
+  `GetCapabilities`, `GetState`, `SetMode`, `SetProfile`, `ApplyFanTable`,
+  and `SetPowerLimits` over D-Bus
 - `data/`, `systemd/`, and `dbus/` now carry the first capability map and bus
   integration skeletons
 

@@ -1,6 +1,7 @@
 #ifndef LCC_DAEMON_MANAGER_H
 #define LCC_DAEMON_MANAGER_H
 
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 
@@ -28,12 +29,13 @@ lcc_status_t lcc_manager_get_state_json(const lcc_manager_t *manager,
                                         char *buffer, size_t buffer_len);
 lcc_status_t lcc_manager_get_thermal_json(const lcc_manager_t *manager,
                                           char *buffer, size_t buffer_len);
+lcc_status_t lcc_manager_set_mode(lcc_manager_t *manager,
+                                  const char *mode_name);
 lcc_status_t lcc_manager_set_profile(lcc_manager_t *manager,
                                      const char *profile_name);
 lcc_status_t lcc_manager_apply_fan_table(lcc_manager_t *manager,
                                          const char *table_name);
-lcc_status_t lcc_manager_set_power_limits(lcc_manager_t *manager, uint8_t pl1,
-                                          uint8_t pl2, uint8_t pl4,
-                                          uint8_t tcc_offset);
+lcc_status_t lcc_manager_set_power_limits(lcc_manager_t *manager,
+                                          const lcc_power_limits_t *limits);
 
 #endif

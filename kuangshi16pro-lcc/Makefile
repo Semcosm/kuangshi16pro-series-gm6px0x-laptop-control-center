@@ -36,6 +36,7 @@ APP_SRCS := \
 	$(SRC_DIR)/core/power/limits.c \
 	$(SRC_DIR)/core/fan/table.c \
 	$(SRC_DIR)/core/fan/table-apply.c \
+	$(SRC_DIR)/cli/dbus_client.c \
 	$(SRC_DIR)/cli/main.c \
 	$(SRC_DIR)/cli/cmd-state.c \
 	$(SRC_DIR)/cli/cmd-debug.c \
@@ -94,7 +95,7 @@ clean:
 
 $(BIN): $(APP_OBJS)
 	@mkdir -p $(dir $@)
-	$(CC) $(CFLAGS) $(LDFLAGS) $^ -o $@ $(LDLIBS)
+	$(CC) $(CFLAGS) $(LDFLAGS) $^ -o $@ $(LDLIBS) $(SYSTEMD_LIBS)
 
 $(DAEMON_BIN): $(DAEMON_OBJS)
 	@mkdir -p $(dir $@)

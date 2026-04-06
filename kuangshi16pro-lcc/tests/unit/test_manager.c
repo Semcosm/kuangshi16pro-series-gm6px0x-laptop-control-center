@@ -16,7 +16,7 @@ static void test_manager_profile_and_fan_updates(void) {
   char json[LCC_MANAGER_JSON_MAX];
 
   assert(lcc_manager_init(&manager, NULL) == LCC_OK);
-  assert(lcc_manager_set_profile(&manager, "turbo") == LCC_OK);
+  assert(lcc_manager_set_mode(&manager, "turbo") == LCC_OK);
   assert(lcc_manager_apply_fan_table(&manager, "M4T1") == LCC_OK);
   assert(lcc_manager_get_state_json(&manager, json, sizeof(json)) == LCC_OK);
   assert(strstr(json, "\"profile\":\"turbo\"") != NULL);
@@ -25,10 +25,20 @@ static void test_manager_profile_and_fan_updates(void) {
 
 static void test_manager_power_update(void) {
   lcc_manager_t manager;
+  lcc_power_limits_t limits;
   char json[LCC_MANAGER_JSON_MAX];
 
   assert(lcc_manager_init(&manager, NULL) == LCC_OK);
-  assert(lcc_manager_set_power_limits(&manager, 75u, 130u, 200u, 5u) == LCC_OK);
+  memset(&limits, 0, sizeof(limits));
+  limits.pl1.present = true;
+  limits.pl1.value = 75u;
+  limits.pl2.present = true;
+  limits.pl2.value = 130u;
+  limits.pl4.present = true;
+  limits.pl4.value = 200u;
+  limits.tcc_offset.present = true;
+  limits.tcc_offset.value = 5u;
+  assert(lcc_manager_set_power_limits(&manager, &limits) == LCC_OK);
   assert(lcc_manager_get_state_json(&manager, json, sizeof(json)) == LCC_OK);
   assert(strstr(json, "\"pl1\":75") != NULL);
   assert(strstr(json, "\"pl2\":130") != NULL);
@@ -44,6 +54,7 @@ static void test_manager_rejects_unsafe_names(void) {
          LCC_ERR_INVALID_ARGUMENT);
   assert(lcc_manager_apply_fan_table(&manager, "bad/name") ==
          LCC_ERR_INVALID_ARGUMENT);
+  assert(lcc_manager_set_mode(&manager, "balanced") == LCC_ERR_PARSE);
 }
 
 void lcc_run_manager_tests(void) {

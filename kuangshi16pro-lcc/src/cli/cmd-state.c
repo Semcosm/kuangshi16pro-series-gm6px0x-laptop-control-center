@@ -5,6 +5,7 @@
 
 #include "backends/amw0/ec-addr-map.h"
 #include "backends/amw0/ecmg.h"
+#include "cli/dbus_client.h"
 #include "common/lcc_log.h"
 
 static lcc_status_t print_observe_group(amw0_backend_t *backend,
@@ -35,43 +36,47 @@ static lcc_status_t print_observe_group(amw0_backend_t *backend,
 }
 
 int lcc_cmd_state_status(int argc, char **argv) {
-  amw0_backend_t backend;
-  char ecrr_path[32];
-  char ecrr_460[AMW0_REPLY_MAX];
-  const char *call_node = lcc_cli_default_call_node();
+  char payload[4096];
+  bool use_user_bus = false;
   int index = 0;
   lcc_status_t status = LCC_OK;
 
   for (index = 0; index < argc; ++index) {
-    if (strcmp(argv[index], "--call-node") == 0 && index + 1 < argc) {
-      call_node = argv[++index];
+    if (lcc_cli_parse_bus_flag(argv[index], &use_user_bus)) {
       continue;
     }
     return lcc_cli_exit_with_status(LCC_ERR_INVALID_ARGUMENT);
   }
 
-  status = lcc_cli_init_backend(&backend, call_node, false);
+  status = lcc_dbus_get_state_json(use_user_bus, payload, sizeof(payload));
   if (status != LCC_OK) {
     return lcc_cli_exit_with_status(status);
   }
 
-  status = lcc_cli_print_transport_snapshot(&backend);
-  if (status != LCC_OK) {
-    return lcc_cli_exit_with_status(status);
-  }
+  (void)printf("%s\n", payload);
+  return 0;
+}
 
-  status = amw0_backend_probe_ecrr_path(&backend, ecrr_path, sizeof(ecrr_path));
-  if (status == LCC_OK) {
-    status = amw0_backend_read_ecrr(&backend, ecrr_path, LCC_AMW0_ADDR_FFAN,
-                                    ecrr_460, sizeof(ecrr_460));
-    if (status != LCC_OK) {
-      return lcc_cli_exit_with_status(status);
+int lcc_cmd_state_capabilities(int argc, char **argv) {
+  char payload[4096];
+  bool use_user_bus = false;
+  int index = 0;
+  lcc_status_t status = LCC_OK;
+
+  for (index = 0; index < argc; ++index) {
+    if (lcc_cli_parse_bus_flag(argv[index], &use_user_bus)) {
+      continue;
     }
-    (void)printf("ECRR_PATH=%s\nECRR_0460=%s\n", ecrr_path, ecrr_460);
-    return 0;
+    return lcc_cli_exit_with_status(LCC_ERR_INVALID_ARGUMENT);
   }
 
-  lcc_log_warn("ECRR path probe not available on this setup");
+  status =
+      lcc_dbus_get_capabilities_json(use_user_bus, payload, sizeof(payload));
+  if (status != LCC_OK) {
+    return lcc_cli_exit_with_status(status);
+  }
+
+  (void)printf("%s\n", payload);
   return 0;
 }
 

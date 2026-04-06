@@ -1,7 +1,9 @@
 #include "cli.h"
 
+#include <stdio.h>
 #include <string.h>
 
+#include "cli/dbus_client.h"
 #include "lcc/profile.h"
 #include "lcc/power.h"
 
@@ -10,7 +12,8 @@ int lcc_cmd_power_set(int argc, char **argv) {
   lcc_profile_document_t document;
   lcc_apply_plan_t plan;
   const char *file_path = NULL;
-  bool execute = false;
+  bool use_user_bus = false;
+  bool plan_only = false;
   int index = 0;
   lcc_status_t status = LCC_OK;
 
@@ -31,8 +34,11 @@ int lcc_cmd_power_set(int argc, char **argv) {
     } else if (strcmp(argv[index], "--tcc-offset") == 0 && index + 1 < argc) {
       limits.tcc_offset.present = true;
       status = lcc_cli_parse_u8(argv[++index], &limits.tcc_offset.value);
+    } else if (strcmp(argv[index], "--plan") == 0) {
+      plan_only = true;
     } else if (strcmp(argv[index], "--execute") == 0) {
-      execute = true;
+      continue;
+    } else if (lcc_cli_parse_bus_flag(argv[index], &use_user_bus)) {
       continue;
     } else {
       return lcc_cli_exit_with_status(LCC_ERR_INVALID_ARGUMENT);
@@ -51,6 +57,7 @@ int lcc_cmd_power_set(int argc, char **argv) {
     if (!document.has_power_limits) {
       return lcc_cli_exit_with_status(LCC_ERR_PARSE);
     }
+    limits = document.power_limits;
     status = lcc_build_power_plan(&document.power_limits, &plan);
   } else {
     status = lcc_build_power_plan(&limits, &plan);
@@ -59,5 +66,27 @@ int lcc_cmd_power_set(int argc, char **argv) {
     return lcc_cli_exit_with_status(status);
   }
 
-  return lcc_cli_print_plan_or_unimplemented(&plan, execute);
+  if (plan_only) {
+    return lcc_cli_print_plan_or_unimplemented(&plan, false);
+  }
+
+  status = lcc_dbus_set_power_limits(use_user_bus, &limits);
+  if (status != LCC_OK) {
+    return lcc_cli_exit_with_status(status);
+  }
+
+  if (limits.pl1.present) {
+    (void)printf("pl1=%u\n", (unsigned int)limits.pl1.value);
+  }
+  if (limits.pl2.present) {
+    (void)printf("pl2=%u\n", (unsigned int)limits.pl2.value);
+  }
+  if (limits.pl4.present) {
+    (void)printf("pl4=%u\n", (unsigned int)limits.pl4.value);
+  }
+  if (limits.tcc_offset.present) {
+    (void)printf("tcc_offset=%u\n", (unsigned int)limits.tcc_offset.value);
+  }
+
+  return 0;
 }

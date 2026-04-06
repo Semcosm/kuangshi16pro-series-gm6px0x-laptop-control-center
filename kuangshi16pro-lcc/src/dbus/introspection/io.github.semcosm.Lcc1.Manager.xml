@@ -8,6 +8,9 @@
     <method name="GetState">
       <arg name="state_json" type="s" direction="out"/>
     </method>
+    <method name="SetMode">
+      <arg name="mode_name" type="s" direction="in"/>
+    </method>
     <method name="SetProfile">
       <arg name="profile_name" type="s" direction="in"/>
     </method>

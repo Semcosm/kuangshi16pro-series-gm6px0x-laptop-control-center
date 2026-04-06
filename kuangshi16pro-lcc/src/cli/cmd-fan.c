@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "cli/dbus_client.h"
 #include "lcc/fan.h"
 
 int lcc_cmd_fan_apply(int argc, char **argv) {
@@ -10,7 +11,8 @@ int lcc_cmd_fan_apply(int argc, char **argv) {
   lcc_apply_plan_t plan;
   const char *preset = "demo";
   const char *file_path = NULL;
-  bool execute = false;
+  bool use_user_bus = false;
+  bool plan_only = false;
   int index = 0;
   lcc_status_t status = LCC_OK;
 
@@ -23,8 +25,14 @@ int lcc_cmd_fan_apply(int argc, char **argv) {
       file_path = argv[++index];
       continue;
     }
+    if (strcmp(argv[index], "--plan") == 0) {
+      plan_only = true;
+      continue;
+    }
     if (strcmp(argv[index], "--execute") == 0) {
-      execute = true;
+      continue;
+    }
+    if (lcc_cli_parse_bus_flag(argv[index], &use_user_bus)) {
       continue;
     }
     return lcc_cli_exit_with_status(LCC_ERR_INVALID_ARGUMENT);
@@ -51,5 +59,10 @@ int lcc_cmd_fan_apply(int argc, char **argv) {
   }
 
   (void)printf("fan-table=%s\n", table.name);
-  return lcc_cli_print_plan_or_unimplemented(&plan, execute);
+  if (plan_only) {
+    return lcc_cli_print_plan_or_unimplemented(&plan, false);
+  }
+
+  return lcc_cli_exit_with_status(
+      lcc_dbus_apply_fan_table(use_user_bus, table.name));
 }

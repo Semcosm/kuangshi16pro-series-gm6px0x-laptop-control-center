@@ -9,19 +9,39 @@
 
 const char *lcc_cli_default_call_node(void) { return "/proc/acpi/call"; }
 
+bool lcc_cli_parse_bus_flag(const char *arg, bool *use_user_bus) {
+  if (arg == NULL || use_user_bus == NULL) {
+    return false;
+  }
+  if (strcmp(arg, "--user-bus") == 0) {
+    *use_user_bus = true;
+    return true;
+  }
+  if (strcmp(arg, "--system-bus") == 0) {
+    *use_user_bus = false;
+    return true;
+  }
+  return false;
+}
+
 void lcc_cli_print_usage(FILE *stream) {
   (void)fprintf(stream,
                 "Usage:\n"
-                "  lccctl status [--call-node PATH]\n"
+                "  lccctl state [--user-bus | --system-bus]\n"
+                "  lccctl status [--user-bus | --system-bus]\n"
+                "  lccctl capabilities [--user-bus | --system-bus]\n"
                 "  lccctl observe GROUP [--call-node PATH] [--ecrr-path PATH]\n"
-                "  lccctl raw wmbc SLOT SAC1 SA00 SA01 SA02 SA03 "
+                "  lccctl debug raw wmbc SLOT SAC1 SA00 SA01 SA02 SA03 "
                 "[--call-node PATH] [--dry-run]\n"
-                "  lccctl mode set MODE [--execute]\n"
+                "  lccctl mode set MODE [--plan] [--user-bus | --system-bus]\n"
                 "  lccctl power set --pl1 N [--pl2 N] [--pl4 N] "
-                "[--tcc-offset N] [--execute]\n"
-                "  lccctl power set --file PATH [--execute]\n"
-                "  lccctl fan apply [--preset demo | --file PATH] [--execute]\n"
-                "  lccctl profile apply --file PATH [--execute]\n"
+                "[--tcc-offset N] [--plan] [--user-bus | --system-bus]\n"
+                "  lccctl power set --file PATH [--plan] "
+                "[--user-bus | --system-bus]\n"
+                "  lccctl fan apply [--preset demo | --file PATH] [--plan] "
+                "[--user-bus | --system-bus]\n"
+                "  lccctl profile apply --file PATH [--plan] "
+                "[--user-bus | --system-bus]\n"
                 "\n"
                 "Profile file format:\n"
                 "  [mode]  value=gaming|office|turbo|custom\n"
@@ -29,9 +49,13 @@ void lcc_cli_print_usage(FILE *stream) {
                 "  [fan]   name=demo cpu.0=40,37,18 gpu.0=45,42,20\n"
                 "\n"
                 "Notes:\n"
-                "  mode/power/fan/profile currently print a staged EC plan.\n"
+                "  state/status/capabilities and mode/power/fan/profile use "
+                "D-Bus by default.\n"
+                "  --plan prints a staged local apply plan instead of calling "
+                "lccd.\n"
+                "  --user-bus is for development; system bus is the default.\n"
                 "  observe groups: mode, power, fan, thermal, all.\n"
-                "  raw wmbc, status, and observe use the AMW0 backend directly.\n");
+                "  observe and debug raw wmbc use the AMW0 backend directly.\n");
 }
 
 int lcc_cli_exit_with_status(lcc_status_t status) {
@@ -152,11 +176,18 @@ int main(int argc, char **argv) {
     return 0;
   }
 
-  if (strcmp(argv[1], "status") == 0) {
+  if (strcmp(argv[1], "state") == 0 || strcmp(argv[1], "status") == 0) {
     return lcc_cmd_state_status(argc - 2, argv + 2);
+  }
+  if (strcmp(argv[1], "capabilities") == 0) {
+    return lcc_cmd_state_capabilities(argc - 2, argv + 2);
   }
   if (strcmp(argv[1], "observe") == 0) {
     return lcc_cmd_state_observe(argc - 2, argv + 2);
+  }
+  if (strcmp(argv[1], "debug") == 0 && argc >= 4 && strcmp(argv[2], "raw") == 0 &&
+      strcmp(argv[3], "wmbc") == 0) {
+    return lcc_cmd_debug_raw_wmbc(argc - 4, argv + 4);
   }
   if (strcmp(argv[1], "raw") == 0 && argc >= 3 && strcmp(argv[2], "wmbc") == 0) {
     return lcc_cmd_debug_raw_wmbc(argc - 3, argv + 3);

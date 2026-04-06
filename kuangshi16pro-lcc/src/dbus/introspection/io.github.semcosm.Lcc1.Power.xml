@@ -7,6 +7,10 @@
       <arg name="pl2" type="y" direction="in"/>
       <arg name="pl4" type="y" direction="in"/>
       <arg name="tcc_offset" type="y" direction="in"/>
+      <arg name="has_pl1" type="b" direction="in"/>
+      <arg name="has_pl2" type="b" direction="in"/>
+      <arg name="has_pl4" type="b" direction="in"/>
+      <arg name="has_tcc_offset" type="b" direction="in"/>
     </method>
   </interface>
 </node>

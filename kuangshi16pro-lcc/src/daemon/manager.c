@@ -38,6 +38,26 @@ static bool name_is_safe(const char *text) {
   return true;
 }
 
+static const char *canonical_mode_name(const char *mode_name) {
+  if (mode_name == NULL) {
+    return NULL;
+  }
+  if (strcmp(mode_name, "gaming") == 0) {
+    return "gaming";
+  }
+  if (strcmp(mode_name, "office") == 0) {
+    return "office";
+  }
+  if (strcmp(mode_name, "turbo") == 0) {
+    return "turbo";
+  }
+  if (strcmp(mode_name, "custom") == 0) {
+    return "custom";
+  }
+
+  return NULL;
+}
+
 static lcc_status_t load_text_file(const char *path, char *buffer,
                                    size_t buffer_len) {
   FILE *stream = NULL;
@@ -83,6 +103,13 @@ static void set_default_capabilities(lcc_manager_t *manager) {
                  "%s", fallback_capabilities_json());
 }
 
+static void merge_power_limit(lcc_optional_byte_t *target,
+                              lcc_optional_byte_t source) {
+  if (target != NULL && source.present) {
+    *target = source;
+  }
+}
+
 static lcc_status_t init_capabilities(lcc_manager_t *manager,
                                       const char *capabilities_path) {
   size_t index = 0;
@@ -121,6 +148,7 @@ static int append_power_json(char *buffer, size_t buffer_len,
 
 lcc_status_t lcc_manager_init(lcc_manager_t *manager,
                               const char *capabilities_path) {
+  lcc_power_limits_t defaults;
   lcc_status_t status = LCC_OK;
 
   if (manager == NULL) {
@@ -130,13 +158,17 @@ lcc_status_t lcc_manager_init(lcc_manager_t *manager,
   memset(manager, 0, sizeof(*manager));
   set_default_state(manager);
 
-  manager->requested_power.pl1.present = true;
-  manager->requested_power.pl2.present = true;
-  manager->requested_power.pl4.present = true;
-  manager->requested_power.tcc_offset.present = true;
-  manager->effective_power = manager->requested_power;
+  memset(&defaults, 0, sizeof(defaults));
+  defaults.pl1.present = true;
+  defaults.pl1.value = 55u;
+  defaults.pl2.present = true;
+  defaults.pl2.value = 95u;
+  defaults.pl4.present = true;
+  defaults.pl4.value = 125u;
+  defaults.tcc_offset.present = true;
+  defaults.tcc_offset.value = 10u;
 
-  status = lcc_manager_set_power_limits(manager, 55u, 95u, 125u, 10u);
+  status = lcc_manager_set_power_limits(manager, &defaults);
   if (status != LCC_OK) {
     return status;
   }
@@ -219,6 +251,22 @@ lcc_status_t lcc_manager_get_thermal_json(const lcc_manager_t *manager,
   return LCC_OK;
 }
 
+lcc_status_t lcc_manager_set_mode(lcc_manager_t *manager,
+                                  const char *mode_name) {
+  const char *canonical_name = NULL;
+
+  if (manager == NULL || mode_name == NULL) {
+    return LCC_ERR_INVALID_ARGUMENT;
+  }
+
+  canonical_name = canonical_mode_name(mode_name);
+  if (canonical_name == NULL) {
+    return LCC_ERR_PARSE;
+  }
+
+  return lcc_manager_set_profile(manager, canonical_name);
+}
+
 lcc_status_t lcc_manager_set_profile(lcc_manager_t *manager,
                                      const char *profile_name) {
   int written = 0;
@@ -265,21 +313,20 @@ lcc_status_t lcc_manager_apply_fan_table(lcc_manager_t *manager,
   return LCC_OK;
 }
 
-lcc_status_t lcc_manager_set_power_limits(lcc_manager_t *manager, uint8_t pl1,
-                                          uint8_t pl2, uint8_t pl4,
-                                          uint8_t tcc_offset) {
-  if (manager == NULL) {
+lcc_status_t lcc_manager_set_power_limits(lcc_manager_t *manager,
+                                          const lcc_power_limits_t *limits) {
+  if (manager == NULL || limits == NULL) {
+    return LCC_ERR_INVALID_ARGUMENT;
+  }
+  if (!limits->pl1.present && !limits->pl2.present && !limits->pl4.present &&
+      !limits->tcc_offset.present) {
     return LCC_ERR_INVALID_ARGUMENT;
   }
 
-  manager->requested_power.pl1.present = true;
-  manager->requested_power.pl2.present = true;
-  manager->requested_power.pl4.present = true;
-  manager->requested_power.tcc_offset.present = true;
-  manager->requested_power.pl1.value = pl1;
-  manager->requested_power.pl2.value = pl2;
-  manager->requested_power.pl4.value = pl4;
-  manager->requested_power.tcc_offset.value = tcc_offset;
+  merge_power_limit(&manager->requested_power.pl1, limits->pl1);
+  merge_power_limit(&manager->requested_power.pl2, limits->pl2);
+  merge_power_limit(&manager->requested_power.pl4, limits->pl4);
+  merge_power_limit(&manager->requested_power.tcc_offset, limits->tcc_offset);
   manager->has_requested_power = true;
 
   manager->effective_power = manager->requested_power;

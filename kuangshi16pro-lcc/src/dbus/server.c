@@ -66,6 +66,25 @@ static int method_set_profile(sd_bus_message *message, void *userdata,
   return sd_bus_reply_method_return(message, "");
 }
 
+static int method_set_mode(sd_bus_message *message, void *userdata,
+                           sd_bus_error *ret_error) {
+  lcc_manager_t *manager = userdata;
+  const char *mode_name = NULL;
+  lcc_status_t status = LCC_OK;
+  const int r = sd_bus_message_read(message, "s", &mode_name);
+
+  if (r < 0) {
+    return r;
+  }
+
+  status = lcc_manager_set_mode(manager, mode_name);
+  if (status != LCC_OK) {
+    return lcc_dbus_error_set(ret_error, status);
+  }
+
+  return sd_bus_reply_method_return(message, "");
+}
+
 static int method_apply_fan_table(sd_bus_message *message, void *userdata,
                                   sd_bus_error *ret_error) {
   lcc_manager_t *manager = userdata;
@@ -88,19 +107,27 @@ static int method_apply_fan_table(sd_bus_message *message, void *userdata,
 static int method_set_power_limits(sd_bus_message *message, void *userdata,
                                    sd_bus_error *ret_error) {
   lcc_manager_t *manager = userdata;
-  uint8_t pl1 = 0;
-  uint8_t pl2 = 0;
-  uint8_t pl4 = 0;
-  uint8_t tcc_offset = 0;
+  lcc_power_limits_t limits;
+  int has_pl1 = 0;
+  int has_pl2 = 0;
+  int has_pl4 = 0;
+  int has_tcc_offset = 0;
   lcc_status_t status = LCC_OK;
-  const int r =
-      sd_bus_message_read(message, "yyyy", &pl1, &pl2, &pl4, &tcc_offset);
+  const int r = sd_bus_message_read(message, "yyyybbbb", &limits.pl1.value,
+                                    &limits.pl2.value, &limits.pl4.value,
+                                    &limits.tcc_offset.value, &has_pl1,
+                                    &has_pl2, &has_pl4, &has_tcc_offset);
 
   if (r < 0) {
     return r;
   }
 
-  status = lcc_manager_set_power_limits(manager, pl1, pl2, pl4, tcc_offset);
+  limits.pl1.present = has_pl1 != 0;
+  limits.pl2.present = has_pl2 != 0;
+  limits.pl4.present = has_pl4 != 0;
+  limits.tcc_offset.present = has_tcc_offset != 0;
+
+  status = lcc_manager_set_power_limits(manager, &limits);
   if (status != LCC_OK) {
     return lcc_dbus_error_set(ret_error, status);
   }
@@ -113,6 +140,8 @@ static const sd_bus_vtable manager_vtable[] = {
     SD_BUS_METHOD("GetCapabilities", "", "s", method_get_capabilities,
                   SD_BUS_VTABLE_UNPRIVILEGED),
     SD_BUS_METHOD("GetState", "", "s", method_get_state,
+                  SD_BUS_VTABLE_UNPRIVILEGED),
+    SD_BUS_METHOD("SetMode", "s", "", method_set_mode,
                   SD_BUS_VTABLE_UNPRIVILEGED),
     SD_BUS_METHOD("SetProfile", "s", "", method_set_profile,
                   SD_BUS_VTABLE_UNPRIVILEGED),
@@ -132,7 +161,7 @@ static const sd_bus_vtable fan_vtable[] = {
 
 static const sd_bus_vtable power_vtable[] = {
     SD_BUS_VTABLE_START(0),
-    SD_BUS_METHOD("SetPowerLimits", "yyyy", "", method_set_power_limits,
+    SD_BUS_METHOD("SetPowerLimits", "yyyybbbb", "", method_set_power_limits,
                   SD_BUS_VTABLE_UNPRIVILEGED),
     SD_BUS_VTABLE_END};
 
