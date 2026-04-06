@@ -24,9 +24,6 @@ int lcc_cmd_profile_apply(int argc, char **argv) {
       plan_only = true;
       continue;
     }
-    if (strcmp(argv[index], "--execute") == 0) {
-      continue;
-    }
     if (lcc_cli_parse_bus_flag(argv[index], &use_user_bus)) {
       continue;
     }

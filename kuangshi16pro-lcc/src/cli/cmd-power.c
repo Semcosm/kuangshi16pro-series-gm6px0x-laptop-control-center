@@ -36,8 +36,6 @@ int lcc_cmd_power_set(int argc, char **argv) {
       status = lcc_cli_parse_u8(argv[++index], &limits.tcc_offset.value);
     } else if (strcmp(argv[index], "--plan") == 0) {
       plan_only = true;
-    } else if (strcmp(argv[index], "--execute") == 0) {
-      continue;
     } else if (lcc_cli_parse_bus_flag(argv[index], &use_user_bus)) {
       continue;
     } else {

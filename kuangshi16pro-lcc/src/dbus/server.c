@@ -24,6 +24,15 @@ static int authorize_method(sd_bus_message *message,
   const lcc_status_t status = lcc_dbus_authorize(
       message, context->use_user_bus, access, action_id);
 
+  if (status == LCC_ERR_PERMISSION && access == LCC_DBUS_ACCESS_WRITE) {
+    return sd_bus_error_set_const(
+        ret_error, "org.freedesktop.DBus.Error.AccessDenied",
+        "authentication is required to modify laptop control settings");
+  }
+  if (status == LCC_ERR_IO && access == LCC_DBUS_ACCESS_WRITE) {
+    return sd_bus_error_set_const(ret_error, "org.freedesktop.DBus.Error.Failed",
+                                  "authorization check failed");
+  }
   if (status != LCC_OK) {
     return lcc_dbus_error_set(ret_error, status);
   }
@@ -74,7 +83,7 @@ static int method_set_profile(sd_bus_message *message, void *userdata,
     return r;
   }
   r = authorize_method(message, context, LCC_DBUS_ACCESS_WRITE,
-                       "io.github.semcosm.Lcc1.modify", ret_error);
+                       LCC_DBUS_ACTION_SET_PROFILE, ret_error);
   if (r < 0) {
     return r;
   }
@@ -98,7 +107,7 @@ static int method_set_mode(sd_bus_message *message, void *userdata,
     return r;
   }
   r = authorize_method(message, context, LCC_DBUS_ACCESS_WRITE,
-                       "io.github.semcosm.Lcc1.modify", ret_error);
+                       LCC_DBUS_ACTION_SET_MODE, ret_error);
   if (r < 0) {
     return r;
   }
@@ -122,7 +131,7 @@ static int method_apply_fan_table(sd_bus_message *message, void *userdata,
     return r;
   }
   r = authorize_method(message, context, LCC_DBUS_ACCESS_WRITE,
-                       "io.github.semcosm.Lcc1.modify", ret_error);
+                       LCC_DBUS_ACTION_SET_FAN_TABLE, ret_error);
   if (r < 0) {
     return r;
   }
@@ -153,7 +162,7 @@ static int method_set_power_limits(sd_bus_message *message, void *userdata,
     return r;
   }
   r = authorize_method(message, context, LCC_DBUS_ACCESS_WRITE,
-                       "io.github.semcosm.Lcc1.modify", ret_error);
+                       LCC_DBUS_ACTION_SET_POWER_LIMITS, ret_error);
   if (r < 0) {
     return r;
   }

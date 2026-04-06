@@ -32,13 +32,16 @@ Authorization model:
 
 - reads are allowed by default on the system bus
 - writes are gated twice:
-  - bus policy only allows mutating calls from privileged senders on the system bus
-  - the daemon runs a write authorization hook before dispatching the request
+  - bus policy allows clients to reach mutating methods on the system bus
+  - the daemon runs a Polkit-backed write authorization hook before dispatching the request
 - the current hook allows:
   - any caller on the user bus, for development
-  - privileged callers on the system bus
-- the hook already carries an action id and is the reserved integration point for
-  future Polkit checks
+  - callers on the system bus that are authorized for the method-specific Polkit action
+- current action ids:
+  - `io.github.semcosm.Lcc1.set-mode`
+  - `io.github.semcosm.Lcc1.set-profile`
+  - `io.github.semcosm.Lcc1.set-fan-table`
+  - `io.github.semcosm.Lcc1.set-power-limits`
 
 Current transport shape:
 

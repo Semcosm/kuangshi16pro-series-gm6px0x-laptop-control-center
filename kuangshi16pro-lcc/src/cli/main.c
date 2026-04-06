@@ -24,6 +24,22 @@ bool lcc_cli_parse_bus_flag(const char *arg, bool *use_user_bus) {
   return false;
 }
 
+static void lcc_cli_print_status_hint(lcc_status_t status) {
+  switch (status) {
+    case LCC_ERR_PERMISSION:
+      lcc_log_info("hint: mutating commands on the system bus are authorized through polkit; use an active desktop session or --user-bus for development");
+      break;
+    case LCC_ERR_NOT_FOUND:
+      lcc_log_info("hint: ensure lccd is running and the D-Bus service files are installed");
+      break;
+    case LCC_ERR_IO:
+      lcc_log_info("hint: inspect lccd logs or journalctl -u lccd for authorization or backend failures");
+      break;
+    default:
+      break;
+  }
+}
+
 void lcc_cli_print_usage(FILE *stream) {
   (void)fprintf(stream,
                 "Usage:\n"
@@ -31,7 +47,7 @@ void lcc_cli_print_usage(FILE *stream) {
                 "  lccctl status [--user-bus | --system-bus]\n"
                 "  lccctl capabilities [--user-bus | --system-bus]\n"
                 "  lccctl observe GROUP [--user-bus | --system-bus]\n"
-                "  lccctl debug raw wmbc SLOT SAC1 SA00 SA01 SA02 SA03 "
+                "  lccctl developer raw wmbc SLOT SAC1 SA00 SA01 SA02 SA03 "
                 "[--call-node PATH] [--dry-run]\n"
                 "  lccctl mode set MODE [--plan] [--user-bus | --system-bus]\n"
                 "  lccctl power set --pl1 N [--pl2 N] [--pl4 N] "
@@ -49,19 +65,19 @@ void lcc_cli_print_usage(FILE *stream) {
                 "  [fan]   name=demo cpu.0=40,37,18 gpu.0=45,42,20\n"
                 "\n"
                 "Notes:\n"
-                "  state/status/capabilities and mode/power/fan/profile use "
-                "D-Bus by default.\n"
+                "  product commands talk to lccd over D-Bus; they do not write hardware directly.\n"
                 "  observe reads daemon state and does not touch AMW0 directly.\n"
                 "  --plan prints a staged local apply plan instead of calling "
                 "lccd.\n"
-                "  --user-bus is for development; system bus is the default.\n"
+                "  system-bus writes are authorized through polkit; --user-bus is for development.\n"
                 "  observe groups: mode, power, fan, thermal, all.\n"
-                "  debug raw wmbc uses the AMW0 backend directly.\n");
+                "  developer raw wmbc bypasses lccd and is intended for admin diagnostics only.\n");
 }
 
 int lcc_cli_exit_with_status(lcc_status_t status) {
   if (status != LCC_OK) {
     lcc_log_error("%s", lcc_status_string(status));
+    lcc_cli_print_status_hint(status);
   }
   return status == LCC_OK ? 0 : 1;
 }
@@ -155,12 +171,9 @@ int main(int argc, char **argv) {
   if (strcmp(argv[1], "observe") == 0) {
     return lcc_cmd_state_observe(argc - 2, argv + 2);
   }
-  if (strcmp(argv[1], "debug") == 0 && argc >= 4 && strcmp(argv[2], "raw") == 0 &&
-      strcmp(argv[3], "wmbc") == 0) {
+  if (strcmp(argv[1], "developer") == 0 && argc >= 4 &&
+      strcmp(argv[2], "raw") == 0 && strcmp(argv[3], "wmbc") == 0) {
     return lcc_cmd_debug_raw_wmbc(argc - 4, argv + 4);
-  }
-  if (strcmp(argv[1], "raw") == 0 && argc >= 3 && strcmp(argv[2], "wmbc") == 0) {
-    return lcc_cmd_debug_raw_wmbc(argc - 3, argv + 3);
   }
   if (strcmp(argv[1], "mode") == 0 && argc >= 3 &&
       strcmp(argv[2], "set") == 0) {

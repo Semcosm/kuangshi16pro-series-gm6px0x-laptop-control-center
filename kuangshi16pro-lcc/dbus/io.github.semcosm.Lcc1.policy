@@ -6,9 +6,39 @@
   <vendor>Semcosm</vendor>
   <vendor_url>https://github.com/Semcosm</vendor_url>
 
-  <action id="io.github.semcosm.Lcc1.modify">
-    <description>Modify Kuangshi16Pro laptop control settings</description>
-    <message>Authentication is required to change performance, fan, or power settings.</message>
+  <action id="io.github.semcosm.Lcc1.set-mode">
+    <description>Change the active performance mode</description>
+    <message>Authentication is required to change the laptop performance mode.</message>
+    <defaults>
+      <allow_any>no</allow_any>
+      <allow_inactive>no</allow_inactive>
+      <allow_active>auth_admin_keep</allow_active>
+    </defaults>
+  </action>
+
+  <action id="io.github.semcosm.Lcc1.set-profile">
+    <description>Apply a laptop control profile</description>
+    <message>Authentication is required to apply a laptop control profile.</message>
+    <defaults>
+      <allow_any>no</allow_any>
+      <allow_inactive>no</allow_inactive>
+      <allow_active>auth_admin_keep</allow_active>
+    </defaults>
+  </action>
+
+  <action id="io.github.semcosm.Lcc1.set-fan-table">
+    <description>Apply a custom fan table</description>
+    <message>Authentication is required to change fan control settings.</message>
+    <defaults>
+      <allow_any>no</allow_any>
+      <allow_inactive>no</allow_inactive>
+      <allow_active>auth_admin_keep</allow_active>
+    </defaults>
+  </action>
+
+  <action id="io.github.semcosm.Lcc1.set-power-limits">
+    <description>Change CPU power limits</description>
+    <message>Authentication is required to change CPU power limits.</message>
     <defaults>
       <allow_any>no</allow_any>
       <allow_inactive>no</allow_inactive>

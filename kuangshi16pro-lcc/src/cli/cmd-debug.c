@@ -5,6 +5,7 @@
 
 #include "backends/amw0/wmbc-pack.h"
 #include "cli/amw0_cli.h"
+#include "common/lcc_log.h"
 
 int lcc_cmd_debug_raw_wmbc(int argc, char **argv) {
   amw0_backend_t backend;
@@ -20,6 +21,8 @@ int lcc_cmd_debug_raw_wmbc(int argc, char **argv) {
     lcc_cli_print_usage(stderr);
     return 1;
   }
+
+  lcc_log_warn("developer raw wmbc bypasses lccd, D-Bus, and polkit");
 
   memset(&packet, 0, sizeof(packet));
 

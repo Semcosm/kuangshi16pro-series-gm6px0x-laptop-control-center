@@ -4,7 +4,7 @@
   <interface name="io.github.semcosm.Lcc1.Fan">
     <method name="ApplyFanTable">
       <annotation name="io.github.semcosm.Lcc1.Access" value="write"/>
-      <annotation name="io.github.semcosm.Lcc1.AuthorizationAction" value="io.github.semcosm.Lcc1.modify"/>
+      <annotation name="io.github.semcosm.Lcc1.AuthorizationAction" value="io.github.semcosm.Lcc1.set-fan-table"/>
       <arg name="table_name" type="s" direction="in"/>
     </method>
   </interface>

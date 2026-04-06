@@ -3,8 +3,10 @@ PKG_CONFIG ?= pkg-config
 
 SYSTEMD_CFLAGS := $(shell $(PKG_CONFIG) --cflags libsystemd 2>/dev/null)
 SYSTEMD_LIBS := $(shell $(PKG_CONFIG) --libs libsystemd 2>/dev/null)
+POLKIT_CFLAGS := $(shell $(PKG_CONFIG) --cflags polkit-gobject-1 2>/dev/null)
+POLKIT_LIBS := $(shell $(PKG_CONFIG) --libs polkit-gobject-1 2>/dev/null)
 
-CPPFLAGS ?= -Iinclude -Isrc $(SYSTEMD_CFLAGS)
+CPPFLAGS ?= -Iinclude -Isrc $(SYSTEMD_CFLAGS) $(POLKIT_CFLAGS)
 CFLAGS_BASE := -std=c11 -Wall -Wextra -Wpedantic -Wshadow -Wconversion -Wformat=2
 RELEASE_CFLAGS := -O2
 DEBUG_CFLAGS := -O0 -g3 -fsanitize=address,undefined -fno-omit-frame-pointer
@@ -129,7 +131,7 @@ $(BIN): $(APP_OBJS)
 
 $(DAEMON_BIN): $(DAEMON_OBJS)
 	@mkdir -p $(dir $@)
-	$(CC) $(CFLAGS) $(LDFLAGS) $^ -o $@ $(LDLIBS) $(SYSTEMD_LIBS)
+	$(CC) $(CFLAGS) $(LDFLAGS) $^ -o $@ $(LDLIBS) $(SYSTEMD_LIBS) $(POLKIT_LIBS)
 
 $(TEST_BIN): $(TEST_OBJS)
 	@mkdir -p $(dir $@)

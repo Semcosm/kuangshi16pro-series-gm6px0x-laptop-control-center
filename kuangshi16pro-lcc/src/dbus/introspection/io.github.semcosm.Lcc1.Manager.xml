@@ -13,12 +13,12 @@
     </method>
     <method name="SetMode">
       <annotation name="io.github.semcosm.Lcc1.Access" value="write"/>
-      <annotation name="io.github.semcosm.Lcc1.AuthorizationAction" value="io.github.semcosm.Lcc1.modify"/>
+      <annotation name="io.github.semcosm.Lcc1.AuthorizationAction" value="io.github.semcosm.Lcc1.set-mode"/>
       <arg name="mode_name" type="s" direction="in"/>
     </method>
     <method name="SetProfile">
       <annotation name="io.github.semcosm.Lcc1.Access" value="write"/>
-      <annotation name="io.github.semcosm.Lcc1.AuthorizationAction" value="io.github.semcosm.Lcc1.modify"/>
+      <annotation name="io.github.semcosm.Lcc1.AuthorizationAction" value="io.github.semcosm.Lcc1.set-profile"/>
       <arg name="profile_name" type="s" direction="in"/>
     </method>
   </interface>

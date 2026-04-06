@@ -34,6 +34,10 @@ static lcc_status_t dbus_error_to_status(const sd_bus_error *error, int r) {
         0) {
       return LCC_ERR_UNIMPLEMENTED;
     }
+    if (strcmp(error->name, "io.github.semcosm.Lcc1.Error.IO") == 0 ||
+        strcmp(error->name, "org.freedesktop.DBus.Error.Failed") == 0) {
+      return LCC_ERR_IO;
+    }
     if (strcmp(error->name, "org.freedesktop.DBus.Error.AccessDenied") == 0) {
       return LCC_ERR_PERMISSION;
     }
