@@ -1,9 +1,9 @@
 #include "daemon/manager.h"
 
-#include <ctype.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
+
+#include "daemon/transaction.h"
 
 static const char *const default_capability_paths[] = {
     "data/capabilities/gm6px0x.json",
@@ -19,48 +19,6 @@ static const char *fallback_capabilities_json(void) {
          "\"features\":{\"fan_table_1p5\":true,\"smart_apc\":true,"
          "\"gpu_mux\":\"experimental\"}"
          "}";
-}
-
-static bool name_is_safe(const char *text) {
-  size_t index = 0;
-
-  if (text == NULL || text[0] == '\0') {
-    return false;
-  }
-
-  for (index = 0; text[index] != '\0'; ++index) {
-    const unsigned char c = (unsigned char)text[index];
-    if (!(isalnum(c) || c == '-' || c == '_' || c == '.')) {
-      return false;
-    }
-  }
-
-  return true;
-}
-
-static lcc_status_t mode_from_name(const char *mode_name,
-                                   lcc_operating_mode_t *mode) {
-  if (mode_name == NULL || mode == NULL) {
-    return LCC_ERR_INVALID_ARGUMENT;
-  }
-  if (strcmp(mode_name, "gaming") == 0) {
-    *mode = LCC_MODE_GAMING;
-    return LCC_OK;
-  }
-  if (strcmp(mode_name, "office") == 0) {
-    *mode = LCC_MODE_OFFICE;
-    return LCC_OK;
-  }
-  if (strcmp(mode_name, "turbo") == 0) {
-    *mode = LCC_MODE_TURBO;
-    return LCC_OK;
-  }
-  if (strcmp(mode_name, "custom") == 0) {
-    *mode = LCC_MODE_CUSTOM;
-    return LCC_OK;
-  }
-
-  return LCC_ERR_PARSE;
 }
 
 static lcc_status_t load_text_file(const char *path, char *buffer,
@@ -133,33 +91,36 @@ static int append_power_json(char *buffer, size_t buffer_len,
                   (unsigned int)target->power_limits.tcc_offset.value);
 }
 
-static void fill_backend_name(lcc_manager_t *manager) {
-  if (manager->state_cache.backend_name[0] == '\0') {
-    (void)snprintf(manager->state_cache.backend_name,
-                   sizeof(manager->state_cache.backend_name), "%s",
-                   lcc_backend_name(manager->backend));
+static int append_target_json(char *buffer, size_t buffer_len,
+                              const lcc_state_target_t *target) {
+  char power_json[128];
+  int power_written = 0;
+
+  if (buffer == NULL || buffer_len == 0u || target == NULL) {
+    return -1;
   }
+
+  power_written = append_power_json(power_json, sizeof(power_json), target);
+  if (power_written < 0) {
+    return -1;
+  }
+
+  return snprintf(buffer, buffer_len,
+                  "{\"profile\":\"%s\",\"fan_table\":\"%s\",\"power\":%s}",
+                  target->profile, target->fan_table, power_json);
 }
 
-static lcc_status_t refresh_state(lcc_manager_t *manager) {
-  lcc_backend_result_t result;
-  lcc_status_t status = LCC_OK;
-
-  if (manager == NULL || manager->backend == NULL) {
-    return LCC_ERR_INVALID_ARGUMENT;
+static const char *transaction_state_name(lcc_transaction_state_t state) {
+  switch (state) {
+    case LCC_TRANSACTION_STATE_IDLE:
+      return "idle";
+    case LCC_TRANSACTION_STATE_PENDING:
+      return "pending";
+    case LCC_TRANSACTION_STATE_FAILED:
+      return "failed";
   }
 
-  status = lcc_backend_read_state(manager->backend, &manager->state_cache,
-                                  &result);
-  if (status != LCC_OK) {
-    return status;
-  }
-
-  if (result.hardware_write) {
-    manager->state_cache.hardware_write = true;
-  }
-  fill_backend_name(manager);
-  return LCC_OK;
+  return "unknown";
 }
 
 lcc_status_t lcc_manager_init(lcc_manager_t *manager, lcc_backend_t *backend,
@@ -180,7 +141,7 @@ lcc_status_t lcc_manager_init(lcc_manager_t *manager, lcc_backend_t *backend,
     return status;
   }
 
-  status = refresh_state(manager);
+  status = lcc_transaction_refresh_state(manager);
   if (status != LCC_OK) {
     return status;
   }
@@ -198,21 +159,51 @@ const char *lcc_manager_capabilities_json(const lcc_manager_t *manager) {
 
 lcc_status_t lcc_manager_get_state_json(const lcc_manager_t *manager,
                                         char *buffer, size_t buffer_len) {
-  char requested_power[128];
-  char effective_power[128];
+  char requested_json[256];
+  char effective_json[256];
+  char pending_json[256];
+  char operation_json[64];
+  char last_error_json[64];
   int requested_written = 0;
   int effective_written = 0;
+  int pending_written = 0;
+  int operation_written = 0;
+  int error_written = 0;
   int written = 0;
 
   if (manager == NULL || buffer == NULL || buffer_len == 0u) {
     return LCC_ERR_INVALID_ARGUMENT;
   }
 
-  requested_written = append_power_json(requested_power, sizeof(requested_power),
-                                        &manager->state_cache.requested);
-  effective_written = append_power_json(effective_power, sizeof(effective_power),
-                                        &manager->state_cache.effective);
-  if (requested_written < 0 || effective_written < 0) {
+  requested_written = append_target_json(requested_json, sizeof(requested_json),
+                                         &manager->state_cache.requested);
+  effective_written = append_target_json(effective_json, sizeof(effective_json),
+                                         &manager->state_cache.effective);
+  if (manager->state_cache.transaction.has_pending_target) {
+    pending_written = append_target_json(
+        pending_json, sizeof(pending_json),
+        &manager->state_cache.transaction.pending_target);
+  } else {
+    pending_written = snprintf(pending_json, sizeof(pending_json), "null");
+  }
+  if (requested_written < 0 || effective_written < 0 || pending_written < 0) {
+    return LCC_ERR_IO;
+  }
+  if (manager->state_cache.transaction.operation[0] == '\0') {
+    operation_written = snprintf(operation_json, sizeof(operation_json), "null");
+  } else {
+    operation_written =
+        snprintf(operation_json, sizeof(operation_json), "\"%s\"",
+                 manager->state_cache.transaction.operation);
+  }
+  if (manager->state_cache.transaction.last_error == LCC_OK) {
+    error_written = snprintf(last_error_json, sizeof(last_error_json), "null");
+  } else {
+    error_written = snprintf(
+        last_error_json, sizeof(last_error_json), "\"%s\"",
+        lcc_status_string(manager->state_cache.transaction.last_error));
+  }
+  if (operation_written < 0 || error_written < 0) {
     return LCC_ERR_IO;
   }
 
@@ -222,14 +213,16 @@ lcc_status_t lcc_manager_get_state_json(const lcc_manager_t *manager,
       "\"service\":\"lccd\","
       "\"backend\":\"%s\","
       "\"hardware_write\":%s,"
-      "\"requested\":{\"profile\":\"%s\",\"fan_table\":\"%s\",\"power\":%s},"
-      "\"effective\":{\"profile\":\"%s\",\"fan_table\":\"%s\",\"power\":%s}"
+      "\"requested\":%s,"
+      "\"effective\":%s,"
+      "\"pending\":%s,"
+      "\"transaction\":{\"state\":\"%s\",\"operation\":%s,\"last_error\":%s}"
       "}",
       manager->state_cache.backend_name,
       manager->state_cache.hardware_write ? "true" : "false",
-      manager->state_cache.requested.profile, manager->state_cache.requested.fan_table,
-      requested_power, manager->state_cache.effective.profile,
-      manager->state_cache.effective.fan_table, effective_power);
+      requested_json, effective_json, pending_json,
+      transaction_state_name(manager->state_cache.transaction.state),
+      operation_json, last_error_json);
   if (written < 0 || (size_t)written >= buffer_len) {
     return LCC_ERR_BUFFER_TOO_SMALL;
   }
@@ -296,81 +289,40 @@ lcc_status_t lcc_manager_get_thermal_json(const lcc_manager_t *manager,
 
 lcc_status_t lcc_manager_set_mode(lcc_manager_t *manager,
                                   const char *mode_name) {
-  lcc_backend_result_t result;
-  lcc_operating_mode_t mode = LCC_MODE_OFFICE;
-  lcc_status_t status = LCC_OK;
+  const lcc_transaction_request_t request = {
+      .kind = LCC_TRANSACTION_MODE,
+      .input.mode_name = mode_name,
+  };
 
-  if (manager == NULL || mode_name == NULL) {
-    return LCC_ERR_INVALID_ARGUMENT;
-  }
-
-  status = mode_from_name(mode_name, &mode);
-  if (status != LCC_OK) {
-    return status;
-  }
-
-  status = lcc_backend_apply_mode(manager->backend, mode, &result);
-  if (status != LCC_OK) {
-    return status;
-  }
-
-  return refresh_state(manager);
+  return lcc_transaction_execute(manager, &request);
 }
 
 lcc_status_t lcc_manager_set_profile(lcc_manager_t *manager,
                                      const char *profile_name) {
-  lcc_backend_result_t result;
-  lcc_status_t status = LCC_OK;
+  const lcc_transaction_request_t request = {
+      .kind = LCC_TRANSACTION_PROFILE,
+      .input.profile_name = profile_name,
+  };
 
-  if (manager == NULL || !name_is_safe(profile_name)) {
-    return LCC_ERR_INVALID_ARGUMENT;
-  }
-
-  status = lcc_backend_apply_profile(manager->backend, profile_name, &result);
-  if (status == LCC_ERR_NOT_SUPPORTED) {
-    return lcc_manager_set_mode(manager, profile_name);
-  }
-  if (status != LCC_OK) {
-    return status;
-  }
-
-  return refresh_state(manager);
+  return lcc_transaction_execute(manager, &request);
 }
 
 lcc_status_t lcc_manager_apply_fan_table(lcc_manager_t *manager,
                                          const char *table_name) {
-  lcc_backend_result_t result;
-  lcc_status_t status = LCC_OK;
+  const lcc_transaction_request_t request = {
+      .kind = LCC_TRANSACTION_FAN_TABLE,
+      .input.fan_table_name = table_name,
+  };
 
-  if (manager == NULL || !name_is_safe(table_name)) {
-    return LCC_ERR_INVALID_ARGUMENT;
-  }
-
-  status = lcc_backend_apply_fan_table(manager->backend, table_name, &result);
-  if (status != LCC_OK) {
-    return status;
-  }
-
-  return refresh_state(manager);
+  return lcc_transaction_execute(manager, &request);
 }
 
 lcc_status_t lcc_manager_set_power_limits(lcc_manager_t *manager,
                                           const lcc_power_limits_t *limits) {
-  lcc_backend_result_t result;
-  lcc_status_t status = LCC_OK;
+  const lcc_transaction_request_t request = {
+      .kind = LCC_TRANSACTION_POWER_LIMITS,
+      .input.power_limits = limits,
+  };
 
-  if (manager == NULL || limits == NULL) {
-    return LCC_ERR_INVALID_ARGUMENT;
-  }
-  if (!limits->pl1.present && !limits->pl2.present && !limits->pl4.present &&
-      !limits->tcc_offset.present) {
-    return LCC_ERR_INVALID_ARGUMENT;
-  }
-
-  status = lcc_backend_apply_power_limits(manager->backend, limits, &result);
-  if (status != LCC_OK) {
-    return status;
-  }
-
-  return refresh_state(manager);
+  return lcc_transaction_execute(manager, &request);
 }

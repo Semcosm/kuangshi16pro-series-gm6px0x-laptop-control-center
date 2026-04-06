@@ -6,6 +6,7 @@
 
 void lcc_run_backend_mock_tests(void);
 void lcc_run_manager_tests(void);
+void lcc_run_transaction_tests(void);
 
 static void test_mode_plan(void) {
   lcc_operating_mode_t mode = LCC_MODE_OFFICE;
@@ -101,5 +102,6 @@ int main(void) {
   test_profile_document_load();
   lcc_run_backend_mock_tests();
   lcc_run_manager_tests();
+  lcc_run_transaction_tests();
   return 0;
 }

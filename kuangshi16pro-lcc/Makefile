@@ -53,6 +53,7 @@ DAEMON_SRCS := \
 	$(SRC_DIR)/daemon/app.c \
 	$(SRC_DIR)/daemon/main.c \
 	$(SRC_DIR)/daemon/manager.c \
+	$(SRC_DIR)/daemon/transaction.c \
 	$(SRC_DIR)/daemon/errors.c \
 	$(SRC_DIR)/dbus/server.c
 
@@ -69,9 +70,11 @@ TEST_SRCS := \
 	$(SRC_DIR)/core/fan/table.c \
 	$(SRC_DIR)/core/fan/table-apply.c \
 	$(SRC_DIR)/daemon/manager.c \
+	$(SRC_DIR)/daemon/transaction.c \
 	$(TEST_DIR)/unit/test_backend_mock.c \
 	$(TEST_DIR)/unit/test_profiles.c \
-	$(TEST_DIR)/unit/test_manager.c
+	$(TEST_DIR)/unit/test_manager.c \
+	$(TEST_DIR)/unit/test_transaction.c
 
 APP_OBJS := $(patsubst %.c,$(OBJ_DIR)/%.o,$(APP_SRCS))
 DAEMON_OBJS := $(patsubst %.c,$(OBJ_DIR)/%.o,$(DAEMON_SRCS))

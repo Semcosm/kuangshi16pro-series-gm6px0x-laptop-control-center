@@ -30,6 +30,18 @@ static const char *mode_name_for_backend(lcc_operating_mode_t mode) {
   return NULL;
 }
 
+static lcc_status_t consume_failure(lcc_status_t *status_slot) {
+  lcc_status_t status = LCC_OK;
+
+  if (status_slot == NULL) {
+    return LCC_OK;
+  }
+
+  status = *status_slot;
+  *status_slot = LCC_OK;
+  return status;
+}
+
 static bool power_limits_equal(const lcc_power_limits_t *left,
                                const lcc_power_limits_t *right) {
   return left->pl1.present == right->pl1.present &&
@@ -85,6 +97,10 @@ static lcc_status_t mock_apply_profile(void *ctx, const char *profile_name,
   if (mock == NULL || profile_name == NULL || profile_name[0] == '\0') {
     return LCC_ERR_INVALID_ARGUMENT;
   }
+  status = consume_failure(&mock->fail_profile_status);
+  if (status != LCC_OK) {
+    return status;
+  }
 
   changed = strcmp(mock->state.requested.profile, profile_name) != 0 ||
             strcmp(mock->state.effective.profile, profile_name) != 0;
@@ -108,10 +124,21 @@ static lcc_status_t mock_apply_profile(void *ctx, const char *profile_name,
 
 static lcc_status_t mock_apply_mode(void *ctx, lcc_operating_mode_t mode,
                                     lcc_backend_result_t *result) {
+  lcc_mock_backend_t *mock = ctx;
   const char *profile_name = mode_name_for_backend(mode);
+  lcc_status_t status = LCC_OK;
+
+  if (mock == NULL) {
+    return LCC_ERR_INVALID_ARGUMENT;
+  }
 
   if (profile_name == NULL) {
     return LCC_ERR_INVALID_ARGUMENT;
+  }
+
+  status = consume_failure(&mock->fail_mode_status);
+  if (status != LCC_OK) {
+    return status;
   }
 
   return mock_apply_profile(ctx, profile_name, result);
@@ -123,9 +150,14 @@ static lcc_status_t mock_apply_power_limits(void *ctx,
   lcc_mock_backend_t *mock = ctx;
   lcc_power_limits_t merged;
   bool changed = false;
+  lcc_status_t status = LCC_OK;
 
   if (mock == NULL || limits == NULL) {
     return LCC_ERR_INVALID_ARGUMENT;
+  }
+  status = consume_failure(&mock->fail_power_status);
+  if (status != LCC_OK) {
+    return status;
   }
   if (!limits->pl1.present && !limits->pl2.present && !limits->pl4.present &&
       !limits->tcc_offset.present) {
@@ -160,6 +192,10 @@ static lcc_status_t mock_apply_fan_table(void *ctx, const char *table_name,
 
   if (mock == NULL || table_name == NULL || table_name[0] == '\0') {
     return LCC_ERR_INVALID_ARGUMENT;
+  }
+  status = consume_failure(&mock->fail_fan_status);
+  if (status != LCC_OK) {
+    return status;
   }
 
   changed = strcmp(mock->state.requested.fan_table, table_name) != 0 ||
@@ -238,4 +274,32 @@ lcc_status_t lcc_mock_backend_init(lcc_mock_backend_t *mock,
   lcc_mock_backend_seed_defaults(mock);
   lcc_backend_bind(backend, &lcc_mock_backend_ops, mock);
   return LCC_OK;
+}
+
+void lcc_mock_backend_fail_next_profile(lcc_mock_backend_t *mock,
+                                        lcc_status_t status) {
+  if (mock != NULL) {
+    mock->fail_profile_status = status;
+  }
+}
+
+void lcc_mock_backend_fail_next_mode(lcc_mock_backend_t *mock,
+                                     lcc_status_t status) {
+  if (mock != NULL) {
+    mock->fail_mode_status = status;
+  }
+}
+
+void lcc_mock_backend_fail_next_power(lcc_mock_backend_t *mock,
+                                      lcc_status_t status) {
+  if (mock != NULL) {
+    mock->fail_power_status = status;
+  }
+}
+
+void lcc_mock_backend_fail_next_fan(lcc_mock_backend_t *mock,
+                                    lcc_status_t status) {
+  if (mock != NULL) {
+    mock->fail_fan_status = status;
+  }
 }
