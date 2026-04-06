@@ -10,6 +10,7 @@
 #define LCC_STATE_NAME_MAX 64u
 #define LCC_STATE_BACKEND_NAME_MAX 32u
 #define LCC_STATE_OPERATION_MAX 32u
+#define LCC_STATE_STAGE_MAX 96u
 
 typedef struct {
   char profile[LCC_STATE_NAME_MAX];
@@ -38,6 +39,7 @@ typedef enum {
 typedef struct {
   lcc_transaction_state_t state;
   char operation[LCC_STATE_OPERATION_MAX];
+  char stage[LCC_STATE_STAGE_MAX];
   bool has_pending_target;
   lcc_state_target_t pending_target;
   lcc_status_t last_error;

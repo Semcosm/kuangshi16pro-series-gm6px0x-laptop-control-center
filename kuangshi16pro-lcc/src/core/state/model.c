@@ -75,6 +75,7 @@ lcc_status_t lcc_state_render_json(
   char effective_json[256];
   char pending_json[256];
   char operation_json[64];
+  char stage_json[128];
   char last_error_json[64];
   char thermal_cpu_temp[32];
   char thermal_gpu_temp[32];
@@ -107,6 +108,12 @@ lcc_status_t lcc_state_render_json(
     (void)snprintf(operation_json, sizeof(operation_json), "\"%s\"",
                    state->transaction.operation);
   }
+  if (state->transaction.stage[0] == '\0') {
+    (void)snprintf(stage_json, sizeof(stage_json), "%s", "null");
+  } else {
+    (void)snprintf(stage_json, sizeof(stage_json), "\"%s\"",
+                   state->transaction.stage);
+  }
   if (state->transaction.last_error == LCC_OK) {
     (void)snprintf(last_error_json, sizeof(last_error_json), "%s", "null");
   } else {
@@ -138,7 +145,7 @@ lcc_status_t lcc_state_render_json(
       "\"requested\":%s,"
       "\"effective\":%s,"
       "\"pending\":%s,"
-      "\"transaction\":{\"state\":\"%s\",\"operation\":%s,\"last_error\":%s},"
+      "\"transaction\":{\"state\":\"%s\",\"operation\":%s,\"stage\":%s,\"last_error\":%s},"
       "\"thermal\":{\"cpu_temp_c\":%s,\"gpu_temp_c\":%s,"
       "\"cpu_fan_rpm\":%s,\"gpu_fan_rpm\":%s}"
       "}",
@@ -153,6 +160,7 @@ lcc_status_t lcc_state_render_json(
       backend_capabilities->needs_reboot_for_mux ? "true" : "false",
       requested_json, effective_json, pending_json,
       transaction_state_name(state->transaction.state), operation_json,
+      stage_json,
       last_error_json, thermal_cpu_temp, thermal_gpu_temp, thermal_cpu_fan,
       thermal_gpu_fan);
   if (written < 0 || (size_t)written >= buffer_len) {

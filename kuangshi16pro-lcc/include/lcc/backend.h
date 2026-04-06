@@ -30,6 +30,7 @@ typedef struct {
   bool changed;
   bool hardware_write;
   bool reboot_required;
+  char stage[LCC_STATE_STAGE_MAX];
 } lcc_backend_result_t;
 
 struct lcc_backend_ops;

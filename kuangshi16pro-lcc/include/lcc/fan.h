@@ -30,5 +30,7 @@ lcc_status_t lcc_build_fan_plan(const lcc_fan_table_t *table,
 lcc_status_t lcc_fan_table_build_demo(lcc_fan_table_t *table,
                                       const char *name);
 lcc_status_t lcc_fan_table_load_file(const char *path, lcc_fan_table_t *table);
+lcc_status_t lcc_fan_table_load_named(const char *table_name,
+                                      lcc_fan_table_t *table);
 
 #endif

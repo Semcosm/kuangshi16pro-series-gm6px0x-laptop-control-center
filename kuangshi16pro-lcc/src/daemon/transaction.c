@@ -104,6 +104,7 @@ static void transaction_clear(lcc_manager_t *manager) {
 
   manager->state_cache.transaction.state = LCC_TRANSACTION_STATE_IDLE;
   manager->state_cache.transaction.operation[0] = '\0';
+  manager->state_cache.transaction.stage[0] = '\0';
   manager->state_cache.transaction.has_pending_target = false;
   memset(&manager->state_cache.transaction.pending_target, 0,
          sizeof(manager->state_cache.transaction.pending_target));
@@ -111,6 +112,7 @@ static void transaction_clear(lcc_manager_t *manager) {
 }
 
 static void transaction_fail(lcc_manager_t *manager, const char *operation_name,
+                             const char *stage_name,
                              const lcc_state_target_t *pending_target,
                              lcc_status_t status) {
   if (manager == NULL || operation_name == NULL || pending_target == NULL) {
@@ -121,6 +123,12 @@ static void transaction_fail(lcc_manager_t *manager, const char *operation_name,
   (void)copy_name(manager->state_cache.transaction.operation,
                   sizeof(manager->state_cache.transaction.operation),
                   operation_name);
+  if (stage_name != NULL && stage_name[0] != '\0') {
+    (void)copy_name(manager->state_cache.transaction.stage,
+                    sizeof(manager->state_cache.transaction.stage), stage_name);
+  } else {
+    manager->state_cache.transaction.stage[0] = '\0';
+  }
   manager->state_cache.transaction.has_pending_target = true;
   manager->state_cache.transaction.pending_target = *pending_target;
   manager->state_cache.transaction.last_error = status;
@@ -199,6 +207,7 @@ static void transaction_begin(lcc_manager_t *manager, const char *operation_name
   (void)copy_name(manager->state_cache.transaction.operation,
                   sizeof(manager->state_cache.transaction.operation),
                   operation_name);
+  manager->state_cache.transaction.stage[0] = '\0';
   manager->state_cache.transaction.has_pending_target = true;
   manager->state_cache.transaction.pending_target = *pending_target;
   manager->state_cache.transaction.last_error = LCC_OK;
@@ -214,6 +223,7 @@ static lcc_status_t transaction_apply(lcc_manager_t *manager,
     return LCC_ERR_INVALID_ARGUMENT;
   }
 
+  lcc_backend_result_reset(result);
   switch (request->kind) {
     case LCC_TRANSACTION_PROFILE:
       status = lcc_backend_apply_profile(manager->backend,
@@ -275,15 +285,22 @@ lcc_status_t lcc_transaction_execute(lcc_manager_t *manager,
 
   transaction_begin(manager, operation_name, &pending_target);
   status = transaction_apply(manager, request, resolved_mode, &result);
+  if (result.stage[0] != '\0') {
+    (void)copy_name(manager->state_cache.transaction.stage,
+                    sizeof(manager->state_cache.transaction.stage),
+                    result.stage);
+  }
   if (status != LCC_OK) {
     (void)lcc_transaction_refresh_state(manager);
-    transaction_fail(manager, operation_name, &pending_target, status);
+    transaction_fail(manager, operation_name, result.stage, &pending_target,
+                     status);
     return status;
   }
 
   status = lcc_transaction_refresh_state(manager);
   if (status != LCC_OK) {
-    transaction_fail(manager, operation_name, &pending_target, status);
+    transaction_fail(manager, operation_name, result.stage, &pending_target,
+                     status);
     return status;
   }
 

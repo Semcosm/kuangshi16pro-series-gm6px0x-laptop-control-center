@@ -51,7 +51,7 @@ static void test_fan_plan(void) {
   assert(lcc_fan_table_build_demo(&table, "demo") == LCC_OK);
   assert(lcc_validate_fan_table(&table) == LCC_OK);
   assert(lcc_build_fan_plan(&table, &plan) == LCC_OK);
-  assert(plan.count == 100u);
+  assert(plan.count == 101u);
   assert(plan.actions[0].kind == LCC_ACTION_STAGE);
   assert(plan.actions[1].kind == LCC_ACTION_CUSTOM_MODE);
   assert(plan.actions[2].kind == LCC_ACTION_STAGE);
@@ -59,7 +59,11 @@ static void test_fan_plan(void) {
   assert(plan.actions[18].addr == 0x0F0Fu);
   assert(plan.actions[19].addr == 0x0F10u);
   assert(plan.actions[51].kind == LCC_ACTION_STAGE);
-  assert(plan.actions[99].addr == 0x0F5Fu);
+  assert(plan.actions[96].addr == 0x0F5Cu);
+  assert(plan.actions[97].kind == LCC_ACTION_STAGE);
+  assert(plan.actions[98].addr == 0x0F5Du);
+  assert(plan.actions[99].addr == 0x0F5Eu);
+  assert(plan.actions[100].addr == 0x0F5Fu);
 }
 
 static void test_amw0_expr_format(void) {
@@ -93,7 +97,26 @@ static void test_profile_document_load(void) {
   assert(document.fan_table.cpu[0].up_temp == 40u);
   assert(document.fan_table.gpu[15].duty == 95u);
   assert(lcc_build_profile_plan(&document, &plan) == LCC_OK);
-  assert(plan.count == 110u);
+  assert(plan.count == 111u);
+}
+
+static void test_fan_table_json_fixture_load(void) {
+  lcc_fan_table_t table;
+  lcc_apply_plan_t plan;
+
+  assert(lcc_fan_table_load_file("tests/fixtures/M4T1.json", &table) == LCC_OK);
+  assert(strcmp(table.name, "M4T1") == 0);
+  assert(table.activated);
+  assert(table.fan_control_respective);
+  assert(table.cpu[0].up_temp == 40u);
+  assert(table.cpu[1].down_temp == 40u);
+  assert(table.gpu[2].duty == 30u);
+  assert(table.cpu[15].up_temp == table.cpu[2].up_temp);
+  assert(table.gpu[15].duty == table.gpu[2].duty);
+  assert(lcc_build_fan_plan(&table, &plan) == LCC_OK);
+  assert(plan.actions[98].value == 0x01u);
+  assert(plan.actions[99].value == 0x01u);
+  assert(plan.actions[100].value == 0x03u);
 }
 
 int main(void) {
@@ -102,6 +125,7 @@ int main(void) {
   test_fan_plan();
   test_amw0_expr_format();
   test_profile_document_load();
+  test_fan_table_json_fixture_load();
   lcc_run_backend_mock_tests();
   lcc_run_backend_amw0_tests();
   lcc_run_backend_standard_tests();

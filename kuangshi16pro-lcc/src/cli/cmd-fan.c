@@ -47,7 +47,7 @@ int lcc_cmd_fan_apply(int argc, char **argv) {
       return lcc_cli_exit_with_status(status);
     }
   } else {
-    status = lcc_fan_table_build_demo(&table, preset);
+    status = lcc_fan_table_load_named(preset, &table);
     if (status != LCC_OK) {
       return lcc_cli_exit_with_status(status);
     }

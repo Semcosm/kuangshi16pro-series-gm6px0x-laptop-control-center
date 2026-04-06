@@ -3,6 +3,22 @@
 #include "backends/amw0/ec-addr-map.h"
 #include "core/profile/plan.h"
 
+static uint8_t fan_tail_status1(const lcc_fan_table_t *table) {
+  return table != NULL && table->activated ? 0x01u : 0x00u;
+}
+
+static uint8_t fan_tail_status2(const lcc_fan_table_t *table) {
+  return table != NULL && table->fan_control_respective ? 0x01u : 0x00u;
+}
+
+static uint8_t fan_tail_control(const lcc_fan_table_t *table) {
+  if (table == NULL || !table->activated) {
+    return 0x00u;
+  }
+
+  return table->fan_control_respective ? 0x03u : 0x01u;
+}
+
 lcc_status_t lcc_build_fan_plan(const lcc_fan_table_t *table,
                                 lcc_apply_plan_t *plan) {
   lcc_status_t status = LCC_OK;
@@ -84,13 +100,41 @@ lcc_status_t lcc_build_fan_plan(const lcc_fan_table_t *table,
       return status;
     }
   }
-  for (index = 0; index < LCC_FAN_POINTS; ++index) {
+  /*
+   * 0xF5D..0xF5F are reserved tail bytes, so staged GPU duty writes stop at
+   * 0xF5C instead of flattening all 16 logical points over the tail region.
+   */
+  for (index = 0; index < LCC_FAN_POINTS - 3u; ++index) {
     status = lcc_plan_append_write(
         plan, (uint16_t)(LCC_AMW0_ADDR_GPU_DUTY_BASE + index),
         table->gpu[index].duty, "gpu duty");
     if (status != LCC_OK) {
       return status;
     }
+  }
+
+  status = lcc_plan_append_stage(plan, "FanTable_Manager1p5::FinalizeTailBytes");
+  if (status != LCC_OK) {
+    return status;
+  }
+
+  status =
+      lcc_plan_append_write(plan, LCC_AMW0_ADDR_FAN_TABLE_STATUS1,
+                            fan_tail_status1(table), "fan table status1");
+  if (status != LCC_OK) {
+    return status;
+  }
+  status =
+      lcc_plan_append_write(plan, LCC_AMW0_ADDR_FAN_TABLE_STATUS2,
+                            fan_tail_status2(table), "fan table status2");
+  if (status != LCC_OK) {
+    return status;
+  }
+  status =
+      lcc_plan_append_write(plan, LCC_AMW0_ADDR_FAN_TABLE_CTRL,
+                            fan_tail_control(table), "fan table control");
+  if (status != LCC_OK) {
+    return status;
   }
 
   return LCC_OK;

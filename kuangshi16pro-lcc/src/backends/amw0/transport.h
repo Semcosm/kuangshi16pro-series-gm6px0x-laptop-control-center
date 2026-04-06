@@ -34,6 +34,8 @@ lcc_status_t amw0_backend_init(amw0_backend_t *backend, const char *call_node,
                                bool dry_run);
 lcc_status_t amw0_backend_set_trace(amw0_backend_t *backend,
                                     const char *trace_file);
+lcc_status_t amw0_backend_trace_note(amw0_backend_t *backend,
+                                     const char *note);
 lcc_status_t amw0_backend_eval(amw0_backend_t *backend, const char *expr,
                                char *reply, size_t reply_len);
 lcc_status_t amw0_backend_send_packet(amw0_backend_t *backend,

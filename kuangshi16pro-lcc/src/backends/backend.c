@@ -12,6 +12,7 @@ void lcc_backend_result_reset(lcc_backend_result_t *result) {
     result->changed = false;
     result->hardware_write = false;
     result->reboot_required = false;
+    result->stage[0] = '\0';
   }
 }
 

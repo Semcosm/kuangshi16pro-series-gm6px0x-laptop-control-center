@@ -44,6 +44,8 @@ typedef struct {
   char ecrr_path[64];
   bool has_ecrr_path;
   amw0_route_t route;
+  size_t fail_after_writes;
+  size_t write_count;
   lcc_state_snapshot_t shadow_state;
 } lcc_amw0_backend_t;
 
@@ -52,6 +54,8 @@ lcc_status_t lcc_amw0_backend_init(lcc_amw0_backend_t *amw0,
                                    const char *call_node,
                                    const char *ecrr_path,
                                    bool dry_run);
+void lcc_amw0_backend_fail_after_writes(lcc_amw0_backend_t *amw0,
+                                        size_t write_count);
 
 extern const lcc_backend_ops_t lcc_mock_backend_ops;
 extern const lcc_backend_ops_t lcc_standard_backend_ops;

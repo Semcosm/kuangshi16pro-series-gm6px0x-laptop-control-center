@@ -80,6 +80,27 @@ static void amw0_trace_io(amw0_backend_t *backend, const char *expr,
   (void)fclose(stream);
 }
 
+lcc_status_t amw0_backend_trace_note(amw0_backend_t *backend,
+                                     const char *note) {
+  FILE *stream = NULL;
+
+  if (backend == NULL || note == NULL || note[0] == '\0') {
+    return LCC_ERR_INVALID_ARGUMENT;
+  }
+  if (!backend->trace_enabled || backend->trace_file[0] == '\0') {
+    return LCC_OK;
+  }
+
+  stream = fopen(backend->trace_file, "a");
+  if (stream == NULL) {
+    return LCC_ERR_IO;
+  }
+
+  (void)fprintf(stream, "note=%s\n\n", note);
+  (void)fclose(stream);
+  return LCC_OK;
+}
+
 lcc_status_t amw0_backend_init(amw0_backend_t *backend, const char *call_node,
                                bool dry_run) {
   int written = 0;

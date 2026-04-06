@@ -52,7 +52,7 @@ static void test_amw0_backend_dry_run_apply(void) {
   assert(capabilities.can_apply_profile);
   assert(capabilities.can_apply_mode);
   assert(capabilities.can_apply_power_limits);
-  assert(!capabilities.can_apply_fan_table);
+  assert(capabilities.can_apply_fan_table);
 
   memset(&state, 0, sizeof(state));
   assert(lcc_backend_read_state(&backend, &state, &result) == LCC_OK);
@@ -102,6 +102,43 @@ static void test_amw0_backend_dry_run_apply(void) {
   (void)unlink(trace_path);
 }
 
+static void test_amw0_fan_table_dry_run_apply_order(void) {
+  char trace_path[256];
+  char trace_contents[65536];
+  lcc_backend_t backend;
+  lcc_amw0_backend_t amw0;
+  lcc_backend_result_t result;
+  lcc_state_snapshot_t state;
+
+  make_trace_path(trace_path, sizeof(trace_path));
+  (void)unlink(trace_path);
+
+  assert(lcc_amw0_backend_init(&amw0, &backend, "/proc/acpi/call", NULL, true) ==
+         LCC_OK);
+  assert(amw0_backend_set_trace(&amw0.transport, trace_path) == LCC_OK);
+  assert(lcc_backend_apply_fan_table(&backend, "M4T1", &result) == LCC_OK);
+  assert(result.changed);
+  assert(!result.hardware_write);
+
+  memset(&state, 0, sizeof(state));
+  assert(lcc_backend_read_state(&backend, &state, &result) == LCC_OK);
+  assert(strcmp(state.effective.fan_table, "M4T1") == 0);
+  assert(strcmp(state.effective.profile, "custom") == 0);
+
+  read_text_file(trace_path, trace_contents, sizeof(trace_contents));
+  assert(strstr(trace_contents, "note=SetFanTableThread -> MyFanTableCtrl::SetFanTable (confirmed call edge)") != NULL);
+  assert(strstr(trace_contents, "note=stage=custom-enable") != NULL);
+  assert(strstr(trace_contents, "note=FanTable_Manager1p5::SetEcFanTable_Cpu") != NULL);
+  assert(strstr(trace_contents, "note=FanTable_Manager1p5::SetEcFanTable_Gpu") != NULL);
+  assert(strstr(trace_contents, "note=FanTable_Manager1p5::FinalizeTailBytes") != NULL);
+  assert(strstr(trace_contents, "addr=0x0F00") != NULL);
+  assert(strstr(trace_contents, "addr=0x0F30") != NULL);
+  assert(strstr(trace_contents, "addr=0x0F5D") != NULL);
+  assert(strstr(trace_contents, "addr=0x0F5F") != NULL);
+
+  (void)unlink(trace_path);
+}
+
 static void test_amw0_transaction_dry_run_apply(void) {
   lcc_backend_t backend;
   lcc_amw0_backend_t amw0;
@@ -135,7 +172,32 @@ static void test_amw0_transaction_dry_run_apply(void) {
   assert(manager.state_cache.effective.power_limits.pl2.value == 120u);
 }
 
+static void test_amw0_transaction_fan_failure_stage(void) {
+  lcc_backend_t backend;
+  lcc_amw0_backend_t amw0;
+  lcc_manager_t manager;
+  lcc_transaction_request_t request;
+
+  assert(lcc_amw0_backend_init(&amw0, &backend, "/proc/acpi/call", NULL, true) ==
+         LCC_OK);
+  lcc_amw0_backend_fail_after_writes(&amw0, 51u);
+  assert(lcc_manager_init(&manager, &backend, NULL) == LCC_OK);
+
+  memset(&request, 0, sizeof(request));
+  request.kind = LCC_TRANSACTION_FAN_TABLE;
+  request.input.fan_table_name = "M4T1";
+  assert(lcc_transaction_execute(&manager, &request) == LCC_ERR_IO);
+  assert(manager.state_cache.transaction.state == LCC_TRANSACTION_STATE_FAILED);
+  assert(strcmp(manager.state_cache.transaction.stage,
+                "FanTable_Manager1p5::SetEcFanTable_Gpu") == 0);
+  assert(strcmp(manager.state_cache.transaction.pending_target.fan_table,
+                "M4T1") == 0);
+  assert(strcmp(manager.state_cache.effective.fan_table, "system-default") == 0);
+}
+
 void lcc_run_backend_amw0_tests(void) {
   test_amw0_backend_dry_run_apply();
+  test_amw0_fan_table_dry_run_apply_order();
   test_amw0_transaction_dry_run_apply();
+  test_amw0_transaction_fan_failure_stage();
 }
