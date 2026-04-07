@@ -76,6 +76,40 @@ static const char *route_backend_name(const lcc_backend_t *backend) {
   return backend != NULL ? lcc_backend_name(backend) : "";
 }
 
+static void set_result_executor(lcc_backend_result_t *result,
+                                const lcc_backend_t *backend) {
+  if (result == NULL || backend == NULL) {
+    return;
+  }
+
+  lcc_backend_result_set_executor(result, lcc_backend_name(backend));
+}
+
+static void set_fallback_detail(lcc_backend_result_t *result,
+                                const char *operation_name,
+                                const lcc_backend_t *from_backend,
+                                const lcc_backend_t *to_backend,
+                                lcc_status_t reason) {
+  char detail[LCC_STATE_REASON_MAX];
+
+  if (result == NULL || operation_name == NULL || from_backend == NULL) {
+    return;
+  }
+
+  if (to_backend != NULL) {
+    (void)snprintf(detail, sizeof(detail),
+                   "%s fell back from %s to %s after %s", operation_name,
+                   lcc_backend_name(from_backend), lcc_backend_name(to_backend),
+                   lcc_status_string(reason));
+  } else {
+    (void)snprintf(detail, sizeof(detail),
+                   "%s stopped at %s because no fallback route is available after %s",
+                   operation_name, lcc_backend_name(from_backend),
+                   lcc_status_string(reason));
+  }
+  lcc_backend_result_set_detail(result, detail);
+}
+
 static void merge_optional_byte(lcc_optional_byte_t *target,
                                 lcc_optional_byte_t source) {
   if (target != NULL && source.present) {
@@ -325,11 +359,14 @@ static lcc_status_t converged_read_state(void *ctx, lcc_state_snapshot_t *state,
       route_primary_backend(converged, LCC_CONVERGED_ROUTE_READ_STATE);
   if (primary_backend == NULL) {
     lcc_backend_result_reset(result);
+    lcc_backend_result_set_detail(result,
+                                  "no converged backend can read state");
     return LCC_ERR_NOT_SUPPORTED;
   }
 
   status = lcc_backend_read_state(primary_backend, state, result);
   used_backend_name = lcc_backend_name(primary_backend);
+  set_result_executor(result, primary_backend);
   if ((status == LCC_ERR_NOT_SUPPORTED || status == LCC_ERR_NOT_FOUND) &&
       (secondary_backend = route_secondary_backend(
            converged, LCC_CONVERGED_ROUTE_READ_STATE, primary_backend)) != NULL) {
@@ -338,6 +375,13 @@ static lcc_status_t converged_read_state(void *ctx, lcc_state_snapshot_t *state,
                  lcc_status_string(status));
     status = lcc_backend_read_state(secondary_backend, state, result);
     used_backend_name = lcc_backend_name(secondary_backend);
+    set_result_executor(result, secondary_backend);
+    if (result != NULL && result->detail[0] == '\0') {
+      set_fallback_detail(result, "read_state", primary_backend,
+                          secondary_backend, LCC_ERR_NOT_SUPPORTED);
+    }
+  } else if (status == LCC_ERR_NOT_SUPPORTED || status == LCC_ERR_NOT_FOUND) {
+    set_fallback_detail(result, "read_state", primary_backend, NULL, status);
   }
   if (status != LCC_OK) {
     return status;
@@ -372,17 +416,29 @@ static lcc_status_t converged_apply_profile(void *ctx, const char *profile_name,
       route_primary_backend(converged, LCC_CONVERGED_ROUTE_APPLY_PROFILE);
   if (primary_backend == NULL) {
     lcc_backend_result_reset(result);
+    lcc_backend_result_set_detail(
+        result, "no converged backend can apply profiles");
     return LCC_ERR_NOT_SUPPORTED;
   }
 
   status = lcc_backend_apply_profile(primary_backend, profile_name, result);
+  set_result_executor(result, primary_backend);
   if (status == LCC_ERR_NOT_SUPPORTED &&
       (secondary_backend = route_secondary_backend(
            converged, LCC_CONVERGED_ROUTE_APPLY_PROFILE, primary_backend)) != NULL) {
     lcc_log_warn("backend route fallback operation=apply_profile from=%s to=%s reason=%s",
                  lcc_backend_name(primary_backend), lcc_backend_name(secondary_backend),
                  lcc_status_string(status));
-    return lcc_backend_apply_profile(secondary_backend, profile_name, result);
+    status = lcc_backend_apply_profile(secondary_backend, profile_name, result);
+    set_result_executor(result, secondary_backend);
+    if (result != NULL && result->detail[0] == '\0') {
+      set_fallback_detail(result, "apply_profile", primary_backend,
+                          secondary_backend, LCC_ERR_NOT_SUPPORTED);
+    }
+    return status;
+  }
+  if (status == LCC_ERR_NOT_SUPPORTED) {
+    set_fallback_detail(result, "apply_profile", primary_backend, NULL, status);
   }
 
   return status;
@@ -403,17 +459,28 @@ static lcc_status_t converged_apply_mode(void *ctx, lcc_operating_mode_t mode,
       route_primary_backend(converged, LCC_CONVERGED_ROUTE_APPLY_MODE);
   if (primary_backend == NULL) {
     lcc_backend_result_reset(result);
+    lcc_backend_result_set_detail(result, "no converged backend can apply modes");
     return LCC_ERR_NOT_SUPPORTED;
   }
 
   status = lcc_backend_apply_mode(primary_backend, mode, result);
+  set_result_executor(result, primary_backend);
   if (status == LCC_ERR_NOT_SUPPORTED &&
       (secondary_backend = route_secondary_backend(
            converged, LCC_CONVERGED_ROUTE_APPLY_MODE, primary_backend)) != NULL) {
     lcc_log_warn("backend route fallback operation=apply_mode from=%s to=%s reason=%s",
                  lcc_backend_name(primary_backend), lcc_backend_name(secondary_backend),
                  lcc_status_string(status));
-    return lcc_backend_apply_mode(secondary_backend, mode, result);
+    status = lcc_backend_apply_mode(secondary_backend, mode, result);
+    set_result_executor(result, secondary_backend);
+    if (result != NULL && result->detail[0] == '\0') {
+      set_fallback_detail(result, "apply_mode", primary_backend,
+                          secondary_backend, LCC_ERR_NOT_SUPPORTED);
+    }
+    return status;
+  }
+  if (status == LCC_ERR_NOT_SUPPORTED) {
+    set_fallback_detail(result, "apply_mode", primary_backend, NULL, status);
   }
 
   return status;
@@ -434,10 +501,13 @@ static lcc_status_t converged_apply_power_limits(
       route_primary_backend(converged, LCC_CONVERGED_ROUTE_APPLY_POWER_LIMITS);
   if (primary_backend == NULL) {
     lcc_backend_result_reset(result);
+    lcc_backend_result_set_detail(
+        result, "no converged backend can apply power limits");
     return LCC_ERR_NOT_SUPPORTED;
   }
 
   status = lcc_backend_apply_power_limits(primary_backend, limits, result);
+  set_result_executor(result, primary_backend);
   if (status == LCC_ERR_NOT_SUPPORTED &&
       (secondary_backend = route_secondary_backend(
            converged, LCC_CONVERGED_ROUTE_APPLY_POWER_LIMITS,
@@ -445,7 +515,17 @@ static lcc_status_t converged_apply_power_limits(
     lcc_log_warn("backend route fallback operation=apply_power_limits from=%s to=%s reason=%s",
                  lcc_backend_name(primary_backend), lcc_backend_name(secondary_backend),
                  lcc_status_string(status));
-    return lcc_backend_apply_power_limits(secondary_backend, limits, result);
+    status = lcc_backend_apply_power_limits(secondary_backend, limits, result);
+    set_result_executor(result, secondary_backend);
+    if (result != NULL && result->detail[0] == '\0') {
+      set_fallback_detail(result, "apply_power_limits", primary_backend,
+                          secondary_backend, LCC_ERR_NOT_SUPPORTED);
+    }
+    return status;
+  }
+  if (status == LCC_ERR_NOT_SUPPORTED) {
+    set_fallback_detail(result, "apply_power_limits", primary_backend, NULL,
+                        status);
   }
 
   return status;
@@ -466,10 +546,13 @@ static lcc_status_t converged_apply_fan_table(void *ctx, const char *table_name,
       route_primary_backend(converged, LCC_CONVERGED_ROUTE_APPLY_FAN_TABLE);
   if (primary_backend == NULL) {
     lcc_backend_result_reset(result);
+    lcc_backend_result_set_detail(
+        result, "no converged backend can apply fan tables");
     return LCC_ERR_NOT_SUPPORTED;
   }
 
   status = lcc_backend_apply_fan_table(primary_backend, table_name, result);
+  set_result_executor(result, primary_backend);
   if (status == LCC_ERR_NOT_SUPPORTED &&
       (secondary_backend = route_secondary_backend(
            converged, LCC_CONVERGED_ROUTE_APPLY_FAN_TABLE,
@@ -477,7 +560,17 @@ static lcc_status_t converged_apply_fan_table(void *ctx, const char *table_name,
     lcc_log_warn("backend route fallback operation=apply_fan_table from=%s to=%s reason=%s",
                  lcc_backend_name(primary_backend), lcc_backend_name(secondary_backend),
                  lcc_status_string(status));
-    return lcc_backend_apply_fan_table(secondary_backend, table_name, result);
+    status = lcc_backend_apply_fan_table(secondary_backend, table_name, result);
+    set_result_executor(result, secondary_backend);
+    if (result != NULL && result->detail[0] == '\0') {
+      set_fallback_detail(result, "apply_fan_table", primary_backend,
+                          secondary_backend, LCC_ERR_NOT_SUPPORTED);
+    }
+    return status;
+  }
+  if (status == LCC_ERR_NOT_SUPPORTED) {
+    set_fallback_detail(result, "apply_fan_table", primary_backend, NULL,
+                        status);
   }
 
   return status;

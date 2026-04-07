@@ -120,6 +120,8 @@ void lcc_run_backend_standard_tests(void) {
   memset(&state, 0, sizeof(state));
   assert(lcc_backend_read_state(&backend, &state, &result) == LCC_OK);
   assert(strcmp(state.backend_name, "standard") == 0);
+  assert(strcmp(result.executor_backend, "standard") == 0);
+  assert(strcmp(result.stage, "read-powercap") == 0);
   assert(strcmp(state.requested.profile, "turbo") == 0);
   assert(strcmp(state.effective.profile, "turbo") == 0);
   assert(strcmp(state.requested.fan_table, "system-default") == 0);
@@ -140,6 +142,8 @@ void lcc_run_backend_standard_tests(void) {
   assert(lcc_backend_apply_mode(&backend, LCC_MODE_OFFICE, &result) == LCC_OK);
   assert(result.changed);
   assert(result.hardware_write);
+  assert(strcmp(result.executor_backend, "standard") == 0);
+  assert(strcmp(result.stage, "write-platform-profile") == 0);
 
   (void)snprintf(path, sizeof(path), "%s/firmware/acpi/platform_profile", root);
   read_text_file(path, profile_value, sizeof(profile_value));
@@ -154,6 +158,8 @@ void lcc_run_backend_standard_tests(void) {
   limits.pl1.value = 60u;
   assert(lcc_backend_apply_power_limits(&backend, &limits, &result) ==
          LCC_ERR_NOT_SUPPORTED);
+  assert(strcmp(result.executor_backend, "standard") == 0);
   assert(lcc_backend_apply_fan_table(&backend, "M4T1", &result) ==
          LCC_ERR_NOT_SUPPORTED);
+  assert(strcmp(result.executor_backend, "standard") == 0);
 }

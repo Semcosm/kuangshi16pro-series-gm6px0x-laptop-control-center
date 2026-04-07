@@ -135,6 +135,7 @@ lcc_status_t lcc_state_render_json(
   char backend_selected_json[64];
   char backend_fallback_reason_json[256];
   char last_apply_stage_json[128];
+  char last_apply_backend_json[64];
   char last_apply_error_json[64];
   char last_apply_target_json[256];
   char thermal_cpu_temp[32];
@@ -172,7 +173,10 @@ lcc_status_t lcc_state_render_json(
                             sizeof(backend_fallback_reason_json),
                             state->backend_fallback_reason) < 0 ||
       append_string_or_null(last_apply_stage_json, sizeof(last_apply_stage_json),
-                            state->last_apply.stage) < 0) {
+                            state->last_apply.stage) < 0 ||
+      append_string_or_null(last_apply_backend_json,
+                            sizeof(last_apply_backend_json),
+                            state->last_apply.backend) < 0) {
     return LCC_ERR_IO;
   }
   if (state->last_apply.has_target) {
@@ -238,6 +242,7 @@ lcc_status_t lcc_state_render_json(
       "\"effective\":%s,"
       "\"pending\":%s,"
       "\"last_apply_stage\":%s,"
+      "\"last_apply_backend\":%s,"
       "\"last_apply_error\":%s,"
       "\"last_apply_target\":%s,"
       "\"transaction\":{\"state\":\"%s\",\"operation\":%s,\"stage\":%s,\"last_error\":%s},"
@@ -255,7 +260,7 @@ lcc_status_t lcc_state_render_json(
       backend_capabilities->has_powercap ? "true" : "false",
       backend_capabilities->needs_reboot_for_mux ? "true" : "false",
       requested_json, effective_json, pending_json, last_apply_stage_json,
-      last_apply_error_json, last_apply_target_json,
+      last_apply_backend_json, last_apply_error_json, last_apply_target_json,
       transaction_state_name(state->transaction.state), operation_json,
       stage_json,
       last_error_json, thermal_cpu_temp, thermal_gpu_temp, thermal_cpu_fan,

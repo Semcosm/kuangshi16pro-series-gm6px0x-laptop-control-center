@@ -56,6 +56,7 @@ typedef struct {
 
 typedef struct {
   char stage[LCC_STATE_STAGE_MAX];
+  char backend[LCC_STATE_BACKEND_NAME_MAX];
   bool has_target;
   lcc_state_target_t target;
   lcc_status_t error;

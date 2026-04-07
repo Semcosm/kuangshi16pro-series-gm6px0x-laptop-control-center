@@ -87,6 +87,17 @@ static void set_literal(char *buffer, size_t buffer_len, const char *value) {
   }
 }
 
+static void normalize_optional_text(char *buffer, size_t buffer_len) {
+  if (buffer == NULL || buffer_len == 0u) {
+    return;
+  }
+
+  trim_quotes(buffer);
+  if (buffer[0] == '\0' || strcmp(buffer, "null") == 0) {
+    set_literal(buffer, buffer_len, "none");
+  }
+}
+
 static int print_observe_mode(const char *payload) {
   char backend[64];
   char backend_selected[64];
@@ -97,6 +108,7 @@ static int print_observe_mode(const char *payload) {
   char pending[64];
   char transaction[64];
   char last_apply_stage[128];
+  char last_apply_backend[64];
   char last_apply_error[64];
   char last_apply_target[256];
   lcc_status_t status = LCC_OK;
@@ -147,6 +159,11 @@ static int print_observe_mode(const char *payload) {
   if (status != LCC_OK) {
     set_literal(last_apply_stage, sizeof(last_apply_stage), "null");
   }
+  status = extract_json_value(payload, "\"last_apply_backend\"",
+                              last_apply_backend, sizeof(last_apply_backend));
+  if (status != LCC_OK) {
+    set_literal(last_apply_backend, sizeof(last_apply_backend), "null");
+  }
   status = extract_json_value(payload, "\"last_apply_error\"", last_apply_error,
                               sizeof(last_apply_error));
   if (status != LCC_OK) {
@@ -160,17 +177,18 @@ static int print_observe_mode(const char *payload) {
 
   trim_quotes(backend);
   trim_quotes(backend_selected);
-  trim_quotes(fallback_reason);
+  normalize_optional_text(fallback_reason, sizeof(fallback_reason));
   trim_quotes(requested);
   trim_quotes(effective);
   trim_quotes(transaction);
-  trim_quotes(last_apply_stage);
-  trim_quotes(last_apply_error);
+  normalize_optional_text(last_apply_stage, sizeof(last_apply_stage));
+  normalize_optional_text(last_apply_backend, sizeof(last_apply_backend));
+  normalize_optional_text(last_apply_error, sizeof(last_apply_error));
   (void)printf(
-      "[mode]\nbackend=%s\nbackend_selected=%s\nfallback_reason=%s\nexecution=%s\nrequested=%s\neffective=%s\npending=%s\ntransaction=%s\nlast_apply_stage=%s\nlast_apply_error=%s\nlast_apply_target=%s\n",
+      "[mode]\nbackend=%s\nbackend_selected=%s\nfallback_reason=%s\nexecution=%s\nrequested=%s\neffective=%s\npending=%s\ntransaction=%s\nlast_apply_stage=%s\nlast_apply_backend=%s\nlast_apply_error=%s\nlast_apply_target=%s\n",
       backend, backend_selected, fallback_reason, execution, requested,
-      effective, pending, transaction, last_apply_stage, last_apply_error,
-      last_apply_target);
+      effective, pending, transaction, last_apply_stage, last_apply_backend,
+      last_apply_error, last_apply_target);
   return 0;
 }
 
@@ -182,6 +200,7 @@ static int print_observe_power(const char *payload) {
   char effective[128];
   char support[128];
   char last_apply_stage[128];
+  char last_apply_backend[64];
   char last_apply_error[64];
   char last_apply_target[256];
   lcc_status_t status = LCC_OK;
@@ -219,6 +238,11 @@ static int print_observe_power(const char *payload) {
   if (status != LCC_OK) {
     set_literal(last_apply_stage, sizeof(last_apply_stage), "null");
   }
+  status = extract_json_value(payload, "\"last_apply_backend\"",
+                              last_apply_backend, sizeof(last_apply_backend));
+  if (status != LCC_OK) {
+    set_literal(last_apply_backend, sizeof(last_apply_backend), "null");
+  }
   status = extract_json_value(payload, "\"last_apply_error\"", last_apply_error,
                               sizeof(last_apply_error));
   if (status != LCC_OK) {
@@ -231,13 +255,15 @@ static int print_observe_power(const char *payload) {
   }
 
   trim_quotes(backend_selected);
-  trim_quotes(fallback_reason);
-  trim_quotes(last_apply_stage);
-  trim_quotes(last_apply_error);
+  normalize_optional_text(fallback_reason, sizeof(fallback_reason));
+  normalize_optional_text(last_apply_stage, sizeof(last_apply_stage));
+  normalize_optional_text(last_apply_backend, sizeof(last_apply_backend));
+  normalize_optional_text(last_apply_error, sizeof(last_apply_error));
   (void)printf(
-      "[power]\nbackend_selected=%s\nfallback_reason=%s\nexecution=%s\nsupport=%s\nrequested=%s\neffective=%s\nlast_apply_stage=%s\nlast_apply_error=%s\nlast_apply_target=%s\n",
+      "[power]\nbackend_selected=%s\nfallback_reason=%s\nexecution=%s\nsupport=%s\nrequested=%s\neffective=%s\nlast_apply_stage=%s\nlast_apply_backend=%s\nlast_apply_error=%s\nlast_apply_target=%s\n",
       backend_selected, fallback_reason, execution, support, requested,
-      effective, last_apply_stage, last_apply_error, last_apply_target);
+      effective, last_apply_stage, last_apply_backend, last_apply_error,
+      last_apply_target);
   return 0;
 }
 
@@ -249,6 +275,7 @@ static int print_observe_fan(const char *payload) {
   char effective[64];
   char thermal[128];
   char last_apply_stage[128];
+  char last_apply_backend[64];
   char last_apply_error[64];
   char last_apply_target[256];
   lcc_status_t status = LCC_OK;
@@ -287,6 +314,11 @@ static int print_observe_fan(const char *payload) {
   if (status != LCC_OK) {
     set_literal(last_apply_stage, sizeof(last_apply_stage), "null");
   }
+  status = extract_json_value(payload, "\"last_apply_backend\"",
+                              last_apply_backend, sizeof(last_apply_backend));
+  if (status != LCC_OK) {
+    set_literal(last_apply_backend, sizeof(last_apply_backend), "null");
+  }
   status = extract_json_value(payload, "\"last_apply_error\"", last_apply_error,
                               sizeof(last_apply_error));
   if (status != LCC_OK) {
@@ -299,15 +331,17 @@ static int print_observe_fan(const char *payload) {
   }
 
   trim_quotes(backend_selected);
-  trim_quotes(fallback_reason);
+  normalize_optional_text(fallback_reason, sizeof(fallback_reason));
   trim_quotes(requested);
   trim_quotes(effective);
-  trim_quotes(last_apply_stage);
-  trim_quotes(last_apply_error);
+  normalize_optional_text(last_apply_stage, sizeof(last_apply_stage));
+  normalize_optional_text(last_apply_backend, sizeof(last_apply_backend));
+  normalize_optional_text(last_apply_error, sizeof(last_apply_error));
   (void)printf(
-      "[fan]\nbackend_selected=%s\nfallback_reason=%s\nexecution=%s\nrequested_table=%s\neffective_table=%s\nthermal=%s\nlast_apply_stage=%s\nlast_apply_error=%s\nlast_apply_target=%s\n",
+      "[fan]\nbackend_selected=%s\nfallback_reason=%s\nexecution=%s\nrequested_table=%s\neffective_table=%s\nthermal=%s\nlast_apply_stage=%s\nlast_apply_backend=%s\nlast_apply_error=%s\nlast_apply_target=%s\n",
       backend_selected, fallback_reason, execution, requested, effective,
-      thermal, last_apply_stage, last_apply_error, last_apply_target);
+      thermal, last_apply_stage, last_apply_backend, last_apply_error,
+      last_apply_target);
   return 0;
 }
 

@@ -7,6 +7,13 @@
 #include "common/lcc_log.h"
 #include "core/state/reader.h"
 
+static const char *const LCC_TX_STAGE_PREFLIGHT = "preflight-validate";
+static const char *const LCC_TX_STAGE_CAPABILITY_GATE = "capability-gate";
+static const char *const LCC_TX_STAGE_BACKEND_ROUTE = "backend-route";
+static const char *const LCC_TX_STAGE_APPLY = "apply";
+static const char *const LCC_TX_STAGE_STATE_REFRESH = "state-refresh";
+static const char *const LCC_TX_STAGE_COMPLETE = "complete";
+
 static bool name_is_safe(const char *text) {
   size_t index = 0;
 
@@ -98,6 +105,42 @@ static const char *transaction_operation_name(lcc_transaction_kind_t kind) {
   return "unknown";
 }
 
+static const char *transaction_capability_name(lcc_transaction_kind_t kind) {
+  switch (kind) {
+    case LCC_TRANSACTION_PROFILE:
+      return "apply_profile";
+    case LCC_TRANSACTION_MODE:
+      return "apply_mode";
+    case LCC_TRANSACTION_POWER_LIMITS:
+      return "apply_power_limits";
+    case LCC_TRANSACTION_FAN_TABLE:
+      return "apply_fan_table";
+  }
+
+  return "unknown";
+}
+
+static bool transaction_capability_supported(
+    const lcc_backend_capabilities_t *capabilities,
+    lcc_transaction_kind_t kind) {
+  if (capabilities == NULL) {
+    return false;
+  }
+
+  switch (kind) {
+    case LCC_TRANSACTION_PROFILE:
+      return capabilities->can_apply_profile;
+    case LCC_TRANSACTION_MODE:
+      return capabilities->can_apply_mode;
+    case LCC_TRANSACTION_POWER_LIMITS:
+      return capabilities->can_apply_power_limits;
+    case LCC_TRANSACTION_FAN_TABLE:
+      return capabilities->can_apply_fan_table;
+  }
+
+  return false;
+}
+
 static void append_text_field(char *buffer, size_t buffer_len, bool *first,
                               const char *label, const char *value) {
   size_t used = 0;
@@ -161,15 +204,20 @@ static void format_target_summary(const lcc_state_target_t *target, char *buffer
   }
 }
 
-static void last_apply_begin(lcc_manager_t *manager,
-                             const lcc_state_target_t *pending_target) {
-  if (manager == NULL || pending_target == NULL) {
+static const char *nonnull_text(const char *value) {
+  return value != NULL && value[0] != '\0' ? value : "none";
+}
+
+static void last_apply_begin(lcc_manager_t *manager) {
+  if (manager == NULL) {
     return;
   }
 
   manager->state_cache.last_apply.stage[0] = '\0';
-  manager->state_cache.last_apply.has_target = true;
-  manager->state_cache.last_apply.target = *pending_target;
+  manager->state_cache.last_apply.backend[0] = '\0';
+  manager->state_cache.last_apply.has_target = false;
+  memset(&manager->state_cache.last_apply.target, 0,
+         sizeof(manager->state_cache.last_apply.target));
   manager->state_cache.last_apply.error = LCC_OK;
 }
 
@@ -187,11 +235,106 @@ static void last_apply_update_stage(lcc_manager_t *manager,
   }
 }
 
+static void last_apply_update_backend(lcc_manager_t *manager,
+                                      const char *backend_name) {
+  if (manager == NULL) {
+    return;
+  }
+
+  if (backend_name != NULL && backend_name[0] != '\0') {
+    (void)copy_name(manager->state_cache.last_apply.backend,
+                    sizeof(manager->state_cache.last_apply.backend),
+                    backend_name);
+  } else {
+    manager->state_cache.last_apply.backend[0] = '\0';
+  }
+}
+
+static void last_apply_set_target(lcc_manager_t *manager,
+                                  const lcc_state_target_t *target) {
+  if (manager == NULL) {
+    return;
+  }
+
+  if (target != NULL) {
+    manager->state_cache.last_apply.has_target = true;
+    manager->state_cache.last_apply.target = *target;
+  } else {
+    manager->state_cache.last_apply.has_target = false;
+    memset(&manager->state_cache.last_apply.target, 0,
+           sizeof(manager->state_cache.last_apply.target));
+  }
+}
+
+static void transaction_update_stage(lcc_manager_t *manager,
+                                     const char *stage_name) {
+  if (manager == NULL) {
+    return;
+  }
+
+  if (stage_name != NULL && stage_name[0] != '\0') {
+    (void)copy_name(manager->state_cache.transaction.stage,
+                    sizeof(manager->state_cache.transaction.stage), stage_name);
+  } else {
+    manager->state_cache.transaction.stage[0] = '\0';
+  }
+}
+
+static void transaction_mark_public_stage(lcc_manager_t *manager,
+                                          const char *stage_name) {
+  transaction_update_stage(manager, stage_name);
+  last_apply_update_stage(manager, stage_name);
+}
+
+static void transaction_set_pending_target(lcc_manager_t *manager,
+                                           const lcc_state_target_t *target) {
+  if (manager == NULL) {
+    return;
+  }
+
+  if (target != NULL) {
+    manager->state_cache.transaction.has_pending_target = true;
+    manager->state_cache.transaction.pending_target = *target;
+  } else {
+    manager->state_cache.transaction.has_pending_target = false;
+    memset(&manager->state_cache.transaction.pending_target, 0,
+           sizeof(manager->state_cache.transaction.pending_target));
+  }
+  last_apply_set_target(manager, target);
+}
+
+static void format_detail_summary(const char *backend_stage,
+                                  const char *detail_text, char *buffer,
+                                  size_t buffer_len) {
+  if (buffer == NULL || buffer_len == 0u) {
+    return;
+  }
+
+  if (backend_stage != NULL && backend_stage[0] != '\0' && detail_text != NULL &&
+      detail_text[0] != '\0') {
+    (void)snprintf(buffer, buffer_len, "backend_stage=%s reason=%s",
+                   backend_stage, detail_text);
+    return;
+  }
+  if (backend_stage != NULL && backend_stage[0] != '\0') {
+    (void)snprintf(buffer, buffer_len, "backend_stage=%s", backend_stage);
+    return;
+  }
+  if (detail_text != NULL && detail_text[0] != '\0') {
+    (void)snprintf(buffer, buffer_len, "%s", detail_text);
+    return;
+  }
+
+  (void)snprintf(buffer, buffer_len, "%s", "none");
+}
+
 static void log_transaction_event(const char *level,
                                   const char *operation_name,
                                   const char *stage_name,
+                                  const char *backend_name,
                                   const lcc_state_target_t *target,
-                                  lcc_status_t status) {
+                                  lcc_status_t status,
+                                  const char *detail_text) {
   char target_summary[256];
 
   if (operation_name == NULL || level == NULL) {
@@ -200,27 +343,30 @@ static void log_transaction_event(const char *level,
 
   format_target_summary(target, target_summary, sizeof(target_summary));
   if (strcmp(level, "error") == 0) {
-    lcc_log_error("transaction operation=%s stage=%s status=%s target=%s",
-                  operation_name,
-                  (stage_name != NULL && stage_name[0] != '\0') ? stage_name
-                                                                : "none",
-                  lcc_status_string(status), target_summary);
+    lcc_log_error(
+        "transaction operation=%s stage=%s backend=%s status=%s target=%s detail=%s",
+        operation_name,
+        (stage_name != NULL && stage_name[0] != '\0') ? stage_name : "none",
+        nonnull_text(backend_name), lcc_status_string(status), target_summary,
+        nonnull_text(detail_text));
     return;
   }
   if (strcmp(level, "warn") == 0) {
-    lcc_log_warn("transaction operation=%s stage=%s status=%s target=%s",
-                 operation_name,
-                 (stage_name != NULL && stage_name[0] != '\0') ? stage_name
-                                                               : "none",
-                 lcc_status_string(status), target_summary);
+    lcc_log_warn(
+        "transaction operation=%s stage=%s backend=%s status=%s target=%s detail=%s",
+        operation_name,
+        (stage_name != NULL && stage_name[0] != '\0') ? stage_name : "none",
+        nonnull_text(backend_name), lcc_status_string(status), target_summary,
+        nonnull_text(detail_text));
     return;
   }
 
-  lcc_log_info("transaction operation=%s stage=%s status=%s target=%s",
-               operation_name,
-               (stage_name != NULL && stage_name[0] != '\0') ? stage_name
-                                                             : "none",
-               lcc_status_string(status), target_summary);
+  lcc_log_info(
+      "transaction operation=%s stage=%s backend=%s status=%s target=%s detail=%s",
+      operation_name,
+      (stage_name != NULL && stage_name[0] != '\0') ? stage_name : "none",
+      nonnull_text(backend_name), lcc_status_string(status), target_summary,
+      nonnull_text(detail_text));
 }
 
 static void transaction_clear(lcc_manager_t *manager) {
@@ -239,9 +385,10 @@ static void transaction_clear(lcc_manager_t *manager) {
 
 static void transaction_fail(lcc_manager_t *manager, const char *operation_name,
                              const char *stage_name,
+                             const char *backend_name,
                              const lcc_state_target_t *pending_target,
                              lcc_status_t status) {
-  if (manager == NULL || operation_name == NULL || pending_target == NULL) {
+  if (manager == NULL || operation_name == NULL) {
     return;
   }
 
@@ -249,19 +396,12 @@ static void transaction_fail(lcc_manager_t *manager, const char *operation_name,
   (void)copy_name(manager->state_cache.transaction.operation,
                   sizeof(manager->state_cache.transaction.operation),
                   operation_name);
-  if (stage_name != NULL && stage_name[0] != '\0') {
-    (void)copy_name(manager->state_cache.transaction.stage,
-                    sizeof(manager->state_cache.transaction.stage), stage_name);
-  } else {
-    manager->state_cache.transaction.stage[0] = '\0';
-  }
-  manager->state_cache.transaction.has_pending_target = true;
-  manager->state_cache.transaction.pending_target = *pending_target;
+  transaction_update_stage(manager, stage_name);
+  transaction_set_pending_target(manager, pending_target);
   manager->state_cache.transaction.last_error = status;
-  manager->state_cache.last_apply.has_target = true;
-  manager->state_cache.last_apply.target = *pending_target;
   manager->state_cache.last_apply.error = status;
   last_apply_update_stage(manager, stage_name);
+  last_apply_update_backend(manager, backend_name);
 }
 
 static lcc_status_t transaction_stage_target(
@@ -327,9 +467,9 @@ static lcc_status_t transaction_stage_target(
   return LCC_ERR_INVALID_ARGUMENT;
 }
 
-static void transaction_begin(lcc_manager_t *manager, const char *operation_name,
-                              const lcc_state_target_t *pending_target) {
-  if (manager == NULL || operation_name == NULL || pending_target == NULL) {
+static void transaction_begin(lcc_manager_t *manager,
+                              const char *operation_name) {
+  if (manager == NULL || operation_name == NULL) {
     return;
   }
 
@@ -338,10 +478,31 @@ static void transaction_begin(lcc_manager_t *manager, const char *operation_name
                   sizeof(manager->state_cache.transaction.operation),
                   operation_name);
   manager->state_cache.transaction.stage[0] = '\0';
-  manager->state_cache.transaction.has_pending_target = true;
-  manager->state_cache.transaction.pending_target = *pending_target;
+  manager->state_cache.transaction.has_pending_target = false;
+  memset(&manager->state_cache.transaction.pending_target, 0,
+         sizeof(manager->state_cache.transaction.pending_target));
   manager->state_cache.transaction.last_error = LCC_OK;
-  last_apply_begin(manager, pending_target);
+  last_apply_begin(manager);
+}
+
+static lcc_status_t transaction_capability_gate(
+    const lcc_manager_t *manager, const lcc_transaction_request_t *request,
+    char *detail, size_t detail_len) {
+  if (manager == NULL || request == NULL || detail == NULL || detail_len == 0u) {
+    return LCC_ERR_INVALID_ARGUMENT;
+  }
+
+  if (transaction_capability_supported(&manager->backend_capabilities,
+                                       request->kind)) {
+    detail[0] = '\0';
+    return LCC_OK;
+  }
+
+  (void)snprintf(detail, detail_len,
+                 "manager capability gate rejected %s for backend selection %s",
+                 transaction_capability_name(request->kind),
+                 nonnull_text(manager->state_cache.backend_selected));
+  return LCC_ERR_NOT_SUPPORTED;
 }
 
 static lcc_status_t transaction_apply(lcc_manager_t *manager,
@@ -399,6 +560,8 @@ lcc_status_t lcc_transaction_execute(lcc_manager_t *manager,
                                      const lcc_transaction_request_t *request) {
   lcc_state_target_t pending_target;
   lcc_backend_result_t result;
+  char detail[LCC_STATE_REASON_MAX];
+  const char *failure_stage = NULL;
   lcc_operating_mode_t resolved_mode = LCC_MODE_OFFICE;
   const char *operation_name = NULL;
   lcc_status_t status = LCC_OK;
@@ -408,49 +571,113 @@ lcc_status_t lcc_transaction_execute(lcc_manager_t *manager,
   }
 
   operation_name = transaction_operation_name(request->kind);
+  lcc_backend_result_reset(&result);
+  detail[0] = '\0';
+  memset(&pending_target, 0, sizeof(pending_target));
+
+  transaction_begin(manager, operation_name);
+  log_transaction_event("info", operation_name, "begin", NULL, NULL, LCC_OK,
+                        NULL);
+
+  transaction_mark_public_stage(manager, LCC_TX_STAGE_PREFLIGHT);
   status = transaction_stage_target(manager, request, &pending_target,
                                     &resolved_mode);
   if (status != LCC_OK) {
+    transaction_fail(manager, operation_name, LCC_TX_STAGE_PREFLIGHT, NULL,
+                     NULL, status);
+    if (request->kind == LCC_TRANSACTION_MODE) {
+      (void)snprintf(detail, sizeof(detail), "could not parse mode=%s",
+                     request->input.mode_name != NULL ? request->input.mode_name
+                                                      : "none");
+    } else if (request->kind == LCC_TRANSACTION_PROFILE) {
+      (void)snprintf(detail, sizeof(detail), "unsafe profile=%s",
+                     request->input.profile_name != NULL
+                         ? request->input.profile_name
+                         : "none");
+    } else if (request->kind == LCC_TRANSACTION_FAN_TABLE) {
+      (void)snprintf(detail, sizeof(detail), "unsafe fan_table=%s",
+                     request->input.fan_table_name != NULL
+                         ? request->input.fan_table_name
+                         : "none");
+    } else {
+      (void)snprintf(detail, sizeof(detail),
+                     "power target requires at least one present limit");
+    }
+    log_transaction_event("error", operation_name, LCC_TX_STAGE_PREFLIGHT, NULL,
+                          NULL, status, detail);
+    return status;
+  }
+  transaction_set_pending_target(manager, &pending_target);
+
+  transaction_mark_public_stage(manager, LCC_TX_STAGE_CAPABILITY_GATE);
+  status = transaction_capability_gate(manager, request, detail, sizeof(detail));
+  if (status != LCC_OK) {
+    transaction_fail(manager, operation_name, LCC_TX_STAGE_CAPABILITY_GATE,
+                     NULL, &pending_target, status);
+    log_transaction_event("error", operation_name, LCC_TX_STAGE_CAPABILITY_GATE,
+                          NULL, &pending_target, status, detail);
     return status;
   }
 
-  transaction_begin(manager, operation_name, &pending_target);
-  log_transaction_event("info", operation_name, "begin", &pending_target,
-                        LCC_OK);
+  transaction_update_stage(manager, LCC_TX_STAGE_BACKEND_ROUTE);
   status = transaction_apply(manager, request, resolved_mode, &result);
+  if (result.executor_backend[0] != '\0') {
+    last_apply_update_backend(manager, result.executor_backend);
+  }
   if (result.stage[0] != '\0') {
-    (void)copy_name(manager->state_cache.transaction.stage,
-                    sizeof(manager->state_cache.transaction.stage),
-                    result.stage);
     last_apply_update_stage(manager, result.stage);
+    transaction_update_stage(manager, result.stage);
+  } else {
+    last_apply_update_stage(manager, LCC_TX_STAGE_APPLY);
   }
   if (status != LCC_OK) {
+    failure_stage = result.stage[0] != '\0'
+                        ? result.stage
+                        : (status == LCC_ERR_NOT_SUPPORTED
+                               ? LCC_TX_STAGE_BACKEND_ROUTE
+                               : LCC_TX_STAGE_APPLY);
+    format_detail_summary(result.stage[0] != '\0' ? result.stage : NULL,
+                          result.detail, detail, sizeof(detail));
+    transaction_fail(manager, operation_name, failure_stage,
+                     result.executor_backend, &pending_target, status);
     (void)lcc_transaction_refresh_state(manager);
-    transaction_fail(manager, operation_name, result.stage, &pending_target,
-                     status);
-    log_transaction_event("error", operation_name, result.stage, &pending_target,
-                          status);
+    log_transaction_event(
+        "error", operation_name,
+        status == LCC_ERR_NOT_SUPPORTED ? LCC_TX_STAGE_BACKEND_ROUTE
+                                        : LCC_TX_STAGE_APPLY,
+        result.executor_backend, &pending_target, status, detail);
     return status;
   }
 
+  last_apply_set_target(manager, &pending_target);
+  last_apply_update_backend(manager, result.executor_backend);
+  manager->state_cache.last_apply.error = LCC_OK;
+  transaction_update_stage(manager, LCC_TX_STAGE_STATE_REFRESH);
   status = lcc_transaction_refresh_state(manager);
   if (status != LCC_OK) {
-    transaction_fail(manager, operation_name, result.stage, &pending_target,
-                     status);
-    log_transaction_event("error", operation_name, result.stage, &pending_target,
-                          status);
+    format_detail_summary(result.stage[0] != '\0' ? result.stage : NULL,
+                          "state refresh failed after backend apply", detail,
+                          sizeof(detail));
+    transaction_fail(manager, operation_name, LCC_TX_STAGE_STATE_REFRESH,
+                     result.executor_backend, &pending_target, status);
+    log_transaction_event("error", operation_name, LCC_TX_STAGE_STATE_REFRESH,
+                          result.executor_backend, &pending_target, status,
+                          detail);
     return status;
   }
 
   if (result.hardware_write) {
     manager->state_cache.hardware_write = true;
   }
-  manager->state_cache.last_apply.has_target = true;
-  manager->state_cache.last_apply.target = pending_target;
   manager->state_cache.last_apply.error = LCC_OK;
-  log_transaction_event("info", operation_name,
-                        result.stage[0] != '\0' ? result.stage : "complete",
-                        &pending_target, LCC_OK);
+  if (result.stage[0] == '\0') {
+    last_apply_update_stage(manager, LCC_TX_STAGE_APPLY);
+  }
+  format_detail_summary(result.stage[0] != '\0' ? result.stage : NULL,
+                        result.detail, detail, sizeof(detail));
+  log_transaction_event("info", operation_name, LCC_TX_STAGE_COMPLETE,
+                        result.executor_backend, &pending_target, LCC_OK,
+                        detail);
   transaction_clear(manager);
   return LCC_OK;
 }

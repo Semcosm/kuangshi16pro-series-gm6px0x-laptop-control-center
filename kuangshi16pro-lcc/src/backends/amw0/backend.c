@@ -189,14 +189,6 @@ static void set_mode_profile_state(lcc_state_snapshot_t *state,
                   profile_name);
 }
 
-static void set_result_stage(lcc_backend_result_t *result, const char *stage) {
-  if (result == NULL || stage == NULL || stage[0] == '\0') {
-    return;
-  }
-
-  (void)copy_name(result->stage, sizeof(result->stage), stage);
-}
-
 static lcc_status_t amw0_probe(void *ctx,
                                lcc_backend_capabilities_t *capabilities,
                                lcc_backend_result_t *result) {
@@ -213,15 +205,17 @@ static lcc_status_t amw0_probe(void *ctx,
   capabilities->can_apply_mode = true;
   capabilities->can_apply_power_limits = true;
   capabilities->can_apply_fan_table = true;
+  lcc_backend_result_reset(result);
+  lcc_backend_result_set_executor(result, "amw0");
 
   if (!amw0->transport.dry_run) {
     status = ensure_ecrr_path(amw0);
     if (status != LCC_OK) {
+      lcc_backend_result_set_detail(result, "amw0 read helper path unavailable");
       return status;
     }
   }
 
-  lcc_backend_result_reset(result);
   return LCC_OK;
 }
 
@@ -235,13 +229,14 @@ static lcc_status_t amw0_read_state(void *ctx, lcc_state_snapshot_t *state,
     return LCC_ERR_INVALID_ARGUMENT;
   }
 
+  lcc_backend_result_reset(result);
+  lcc_backend_result_set_executor(result, "amw0");
   *state = amw0->shadow_state;
   (void)copy_name(state->backend_name, sizeof(state->backend_name), "amw0");
   (void)lcc_backend_state_set_metadata(state, "amw0", "amw0", NULL,
                                        &amw0->shadow_state.execution);
 
   if (amw0->transport.dry_run) {
-    lcc_backend_result_reset(result);
     return LCC_OK;
   }
 
@@ -292,8 +287,9 @@ static lcc_status_t amw0_read_state(void *ctx, lcc_state_snapshot_t *state,
   }
 
   amw0->shadow_state = *state;
-  lcc_backend_result_reset(result);
   if (!any_live_value) {
+    lcc_backend_result_set_detail(result,
+                                  "amw0 state read returned no live values");
     return LCC_ERR_NOT_FOUND;
   }
   return LCC_OK;
@@ -320,7 +316,7 @@ static lcc_status_t apply_custom_enable(lcc_amw0_backend_t *amw0,
                                         lcc_backend_result_t *result) {
   lcc_status_t status = LCC_OK;
 
-  set_result_stage(result, "custom-enable");
+  lcc_backend_result_set_stage(result, "custom-enable");
   (void)amw0_backend_trace_note(
       &amw0->transport,
       "stage=custom-enable label=keep custom fan-control path enabled while programming table");
@@ -345,7 +341,7 @@ static lcc_status_t apply_plan_ec_write(lcc_amw0_backend_t *amw0,
     return LCC_ERR_INVALID_ARGUMENT;
   }
 
-  set_result_stage(result, stage_name);
+  lcc_backend_result_set_stage(result, stage_name);
   (void)snprintf(note, sizeof(note),
                  "stage=%s write=%s addr=0x%04X value=0x%02X",
                  stage_name != NULL ? stage_name : "fan-write", action->label,
@@ -372,7 +368,7 @@ static lcc_status_t apply_fan_plan(lcc_amw0_backend_t *amw0,
     switch (action->kind) {
       case LCC_ACTION_STAGE:
         current_stage = action->label;
-        set_result_stage(result, action->label);
+        lcc_backend_result_set_stage(result, action->label);
         (void)amw0_backend_trace_note(&amw0->transport, action->label);
         break;
       case LCC_ACTION_CUSTOM_MODE:
@@ -407,22 +403,24 @@ static lcc_status_t amw0_apply_mode(void *ctx, lcc_operating_mode_t mode,
   }
 
   lcc_backend_result_reset(result);
+  lcc_backend_result_set_executor(result, "amw0");
   changed = strcmp(amw0->shadow_state.effective.profile, profile_name) != 0;
-  set_result_stage(result, "set-mode-index");
+  lcc_backend_result_set_stage(result, "set-mode-index");
 
   status = write_ec_byte(amw0, LCC_AMW0_ADDR_MODE_INDEX, mode_index_for_mode(mode));
   if (status != LCC_OK) {
+    lcc_backend_result_set_detail(result, "amw0 mode index write failed");
     return status;
   }
-  set_result_stage(result, "set-mode-control");
+  lcc_backend_result_set_stage(result, "set-mode-control");
   status = write_ec_byte(amw0, LCC_AMW0_ADDR_MODE_CONTROL,
                          mode_control_for_mode(mode));
   if (status != LCC_OK) {
+    lcc_backend_result_set_detail(result, "amw0 mode control write failed");
     return status;
   }
 
   set_mode_profile_state(&amw0->shadow_state, mode);
-  lcc_backend_result_reset(result);
   if (result != NULL) {
     result->changed = changed;
     result->hardware_write = !amw0->transport.dry_run;
@@ -483,6 +481,7 @@ static lcc_status_t amw0_apply_power_limits(void *ctx,
   }
 
   lcc_backend_result_reset(result);
+  lcc_backend_result_set_executor(result, "amw0");
   merged = amw0->shadow_state.effective.power_limits;
   merge_optional_byte(&merged.pl1, limits->pl1);
   merge_optional_byte(&merged.pl2, limits->pl2);
@@ -492,31 +491,35 @@ static lcc_status_t amw0_apply_power_limits(void *ctx,
             !power_limits_equal(&amw0->shadow_state.effective.power_limits, &merged);
 
   if (limits->pl1.present) {
-    set_result_stage(result, "write-pl1");
+    lcc_backend_result_set_stage(result, "write-pl1");
     status = write_ec_byte(amw0, LCC_AMW0_ADDR_PL1, limits->pl1.value);
     if (status != LCC_OK) {
+      lcc_backend_result_set_detail(result, "amw0 PL1 write failed");
       return status;
     }
   }
   if (limits->pl2.present) {
-    set_result_stage(result, "write-pl2");
+    lcc_backend_result_set_stage(result, "write-pl2");
     status = write_ec_byte(amw0, LCC_AMW0_ADDR_PL2, limits->pl2.value);
     if (status != LCC_OK) {
+      lcc_backend_result_set_detail(result, "amw0 PL2 write failed");
       return status;
     }
   }
   if (limits->pl4.present) {
-    set_result_stage(result, "write-pl4");
+    lcc_backend_result_set_stage(result, "write-pl4");
     status = write_ec_byte(amw0, LCC_AMW0_ADDR_PL4, limits->pl4.value);
     if (status != LCC_OK) {
+      lcc_backend_result_set_detail(result, "amw0 PL4 write failed");
       return status;
     }
   }
   if (limits->tcc_offset.present) {
-    set_result_stage(result, "write-tcc-offset");
+    lcc_backend_result_set_stage(result, "write-tcc-offset");
     status =
         write_ec_byte(amw0, LCC_AMW0_ADDR_TCC_OFFSET, limits->tcc_offset.value);
     if (status != LCC_OK) {
+      lcc_backend_result_set_detail(result, "amw0 TCC offset write failed");
       return status;
     }
   }
@@ -525,7 +528,6 @@ static lcc_status_t amw0_apply_power_limits(void *ctx,
   amw0->shadow_state.effective.power_limits = merged;
   amw0->shadow_state.requested.has_power_limits = true;
   amw0->shadow_state.effective.has_power_limits = true;
-  lcc_backend_result_reset(result);
   if (result != NULL) {
     result->changed = changed;
     result->hardware_write = !amw0->transport.dry_run;
@@ -546,18 +548,24 @@ static lcc_status_t amw0_apply_fan_table(void *ctx, const char *table_name,
   }
 
   lcc_backend_result_reset(result);
+  lcc_backend_result_set_executor(result, "amw0");
   status = lcc_fan_table_load_named(table_name, &table);
   if (status != LCC_OK) {
+    lcc_backend_result_set_detail(result, "fan table fixture could not be loaded");
     return status;
   }
   status = lcc_build_fan_plan(&table, &plan);
   if (status != LCC_OK) {
+    lcc_backend_result_set_detail(result, "fan table could not be translated into an apply plan");
     return status;
   }
 
   changed = strcmp(amw0->shadow_state.effective.fan_table, table.name) != 0;
   status = apply_fan_plan(amw0, &plan, result);
   if (status != LCC_OK) {
+    if (result != NULL && result->detail[0] == '\0') {
+      lcc_backend_result_set_detail(result, "amw0 fan table programming failed");
+    }
     return status;
   }
 

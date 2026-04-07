@@ -99,6 +99,7 @@ TEST_SRCS := \
 	$(TEST_DIR)/unit/test_backend_standard.c \
 	$(TEST_DIR)/unit/test_backend_mock.c \
 	$(TEST_DIR)/unit/test_profiles.c \
+	$(TEST_DIR)/unit/test_state_model.c \
 	$(TEST_DIR)/unit/test_manager.c \
 	$(TEST_DIR)/unit/test_transaction.c
 

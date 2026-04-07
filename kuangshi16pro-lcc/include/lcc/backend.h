@@ -31,6 +31,8 @@ typedef struct {
   bool hardware_write;
   bool reboot_required;
   char stage[LCC_STATE_STAGE_MAX];
+  char executor_backend[LCC_STATE_BACKEND_NAME_MAX];
+  char detail[LCC_STATE_REASON_MAX];
 } lcc_backend_result_t;
 
 struct lcc_backend_ops;
@@ -80,5 +82,11 @@ lcc_status_t lcc_backend_apply_power_limits(const lcc_backend_t *backend,
 lcc_status_t lcc_backend_apply_fan_table(const lcc_backend_t *backend,
                                          const char *table_name,
                                          lcc_backend_result_t *result);
+void lcc_backend_result_set_stage(lcc_backend_result_t *result,
+                                  const char *stage);
+void lcc_backend_result_set_executor(lcc_backend_result_t *result,
+                                     const char *backend_name);
+void lcc_backend_result_set_detail(lcc_backend_result_t *result,
+                                   const char *detail);
 
 #endif

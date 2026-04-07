@@ -72,6 +72,7 @@ static lcc_status_t mock_probe(void *ctx,
 
   *capabilities = mock->capabilities;
   lcc_backend_result_reset(result);
+  lcc_backend_result_set_executor(result, "mock");
   return LCC_OK;
 }
 
@@ -87,6 +88,7 @@ static lcc_status_t mock_read_state(void *ctx, lcc_state_snapshot_t *state,
   (void)lcc_backend_state_set_metadata(state, "mock", "mock", NULL,
                                        &mock->state.execution);
   lcc_backend_result_reset(result);
+  lcc_backend_result_set_executor(result, "mock");
   return LCC_OK;
 }
 
@@ -99,8 +101,11 @@ static lcc_status_t mock_apply_profile(void *ctx, const char *profile_name,
   if (mock == NULL || profile_name == NULL || profile_name[0] == '\0') {
     return LCC_ERR_INVALID_ARGUMENT;
   }
+  lcc_backend_result_reset(result);
+  lcc_backend_result_set_executor(result, "mock");
   status = consume_failure(&mock->fail_profile_status);
   if (status != LCC_OK) {
+    lcc_backend_result_set_detail(result, "mock apply_profile failed");
     return status;
   }
 
@@ -117,7 +122,6 @@ static lcc_status_t mock_apply_profile(void *ctx, const char *profile_name,
     return status;
   }
 
-  lcc_backend_result_reset(result);
   if (result != NULL) {
     result->changed = changed;
   }
@@ -138,8 +142,11 @@ static lcc_status_t mock_apply_mode(void *ctx, lcc_operating_mode_t mode,
     return LCC_ERR_INVALID_ARGUMENT;
   }
 
+  lcc_backend_result_reset(result);
+  lcc_backend_result_set_executor(result, "mock");
   status = consume_failure(&mock->fail_mode_status);
   if (status != LCC_OK) {
+    lcc_backend_result_set_detail(result, "mock apply_mode failed");
     return status;
   }
 
@@ -157,12 +164,16 @@ static lcc_status_t mock_apply_power_limits(void *ctx,
   if (mock == NULL || limits == NULL) {
     return LCC_ERR_INVALID_ARGUMENT;
   }
+  lcc_backend_result_reset(result);
+  lcc_backend_result_set_executor(result, "mock");
   status = consume_failure(&mock->fail_power_status);
   if (status != LCC_OK) {
+    lcc_backend_result_set_detail(result, "mock apply_power_limits failed");
     return status;
   }
   if (!limits->pl1.present && !limits->pl2.present && !limits->pl4.present &&
       !limits->tcc_offset.present) {
+    lcc_backend_result_set_detail(result, "mock apply_power_limits requires at least one limit");
     return LCC_ERR_INVALID_ARGUMENT;
   }
 
@@ -179,7 +190,6 @@ static lcc_status_t mock_apply_power_limits(void *ctx,
   mock->state.requested.has_power_limits = true;
   mock->state.effective.has_power_limits = true;
 
-  lcc_backend_result_reset(result);
   if (result != NULL) {
     result->changed = changed;
   }
@@ -195,8 +205,11 @@ static lcc_status_t mock_apply_fan_table(void *ctx, const char *table_name,
   if (mock == NULL || table_name == NULL || table_name[0] == '\0') {
     return LCC_ERR_INVALID_ARGUMENT;
   }
+  lcc_backend_result_reset(result);
+  lcc_backend_result_set_executor(result, "mock");
   status = consume_failure(&mock->fail_fan_status);
   if (status != LCC_OK) {
+    lcc_backend_result_set_detail(result, "mock apply_fan_table failed");
     return status;
   }
 
@@ -213,7 +226,6 @@ static lcc_status_t mock_apply_fan_table(void *ctx, const char *table_name,
     return status;
   }
 
-  lcc_backend_result_reset(result);
   if (result != NULL) {
     result->changed = changed;
   }

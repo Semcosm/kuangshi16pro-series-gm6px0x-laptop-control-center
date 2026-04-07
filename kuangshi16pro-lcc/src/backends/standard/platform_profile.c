@@ -168,7 +168,10 @@ lcc_status_t lcc_standard_platform_profile_apply_mode(
   }
 
   status = write_text_file(standard->platform_profile_path, profile);
-  lcc_backend_result_reset(result);
+  if (status != LCC_OK && result != NULL) {
+    lcc_backend_result_set_detail(result,
+                                  "platform_profile write failed");
+  }
   if (status == LCC_OK && result != NULL) {
     result->changed = true;
     result->hardware_write = true;
@@ -186,12 +189,16 @@ lcc_status_t lcc_standard_platform_profile_apply_profile(
     return LCC_ERR_INVALID_ARGUMENT;
   }
   if (profile == NULL) {
-    lcc_backend_result_reset(result);
+    lcc_backend_result_set_detail(result,
+                                  "platform_profile alias unsupported");
     return LCC_ERR_NOT_SUPPORTED;
   }
 
   status = write_text_file(standard->platform_profile_path, profile);
-  lcc_backend_result_reset(result);
+  if (status != LCC_OK && result != NULL) {
+    lcc_backend_result_set_detail(result,
+                                  "platform_profile write failed");
+  }
   if (status == LCC_OK && result != NULL) {
     result->changed = true;
     result->hardware_write = true;

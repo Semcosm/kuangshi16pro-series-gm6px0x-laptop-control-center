@@ -46,3 +46,7 @@ Backend execution contract:
 The current CLI still talks to the AMW0 backend directly for observation and
 transport experiments. That is a temporary transitional arrangement until the
 daemon and D-Bus server are wired up.
+
+Runtime diagnostic field semantics are defined separately in
+`docs/observability.md` so `GetState` stays a stable operational contract while
+backend routing keeps evolving internally.

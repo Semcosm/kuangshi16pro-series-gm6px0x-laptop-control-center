@@ -6,6 +6,7 @@
 
 static lcc_status_t unsupported_operation(lcc_backend_result_t *result) {
   lcc_backend_result_reset(result);
+  lcc_backend_result_set_detail(result, "backend operation unavailable");
   return LCC_ERR_NOT_SUPPORTED;
 }
 
@@ -121,7 +122,37 @@ void lcc_backend_result_reset(lcc_backend_result_t *result) {
     result->hardware_write = false;
     result->reboot_required = false;
     result->stage[0] = '\0';
+    result->executor_backend[0] = '\0';
+    result->detail[0] = '\0';
   }
+}
+
+void lcc_backend_result_set_stage(lcc_backend_result_t *result,
+                                  const char *stage) {
+  if (result == NULL || stage == NULL || stage[0] == '\0') {
+    return;
+  }
+
+  (void)lcc_backend_copy_text(result->stage, sizeof(result->stage), stage);
+}
+
+void lcc_backend_result_set_executor(lcc_backend_result_t *result,
+                                     const char *backend_name) {
+  if (result == NULL || backend_name == NULL || backend_name[0] == '\0') {
+    return;
+  }
+
+  (void)lcc_backend_copy_text(result->executor_backend,
+                              sizeof(result->executor_backend), backend_name);
+}
+
+void lcc_backend_result_set_detail(lcc_backend_result_t *result,
+                                   const char *detail) {
+  if (result == NULL || detail == NULL || detail[0] == '\0') {
+    return;
+  }
+
+  (void)lcc_backend_copy_text(result->detail, sizeof(result->detail), detail);
 }
 
 void lcc_backend_bind(lcc_backend_t *backend, const lcc_backend_ops_t *ops,

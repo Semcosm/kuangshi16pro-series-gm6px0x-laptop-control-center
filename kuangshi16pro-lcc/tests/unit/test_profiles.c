@@ -9,6 +9,7 @@ void lcc_run_backend_amw0_tests(void);
 void lcc_run_backend_converged_tests(void);
 void lcc_run_backend_standard_tests(void);
 void lcc_run_manager_tests(void);
+void lcc_run_state_model_tests(void);
 void lcc_run_transaction_tests(void);
 
 static void test_mode_plan(void) {
@@ -131,6 +132,7 @@ int main(void) {
   lcc_run_backend_amw0_tests();
   lcc_run_backend_converged_tests();
   lcc_run_manager_tests();
+  lcc_run_state_model_tests();
   lcc_run_transaction_tests();
   return 0;
 }

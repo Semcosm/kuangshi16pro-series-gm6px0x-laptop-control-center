@@ -141,12 +141,15 @@ void lcc_run_backend_converged_tests(void) {
   assert(strcmp(state.execution.apply_mode, "standard") == 0);
   assert(strcmp(state.execution.apply_power_limits, "amw0") == 0);
   assert(strcmp(state.execution.apply_fan_table, "amw0") == 0);
+  assert(strcmp(result.executor_backend, "standard") == 0);
   assert(strstr(state.backend_fallback_reason, "apply_power_limits") != NULL);
   assert(strstr(state.backend_fallback_reason, "apply_fan_table") != NULL);
 
   assert(lcc_backend_apply_mode(&converged_handle, LCC_MODE_OFFICE, &result) ==
          LCC_OK);
   assert(result.hardware_write);
+  assert(strcmp(result.executor_backend, "standard") == 0);
+  assert(strcmp(result.stage, "write-platform-profile") == 0);
   (void)snprintf(path, sizeof(path), "%s/firmware/acpi/platform_profile", root);
   read_text_file(path, profile_value, sizeof(profile_value));
   assert(strcmp(profile_value, "low-power\n") == 0);
@@ -158,6 +161,7 @@ void lcc_run_backend_converged_tests(void) {
   limits.pl2.value = 120u;
   assert(lcc_backend_apply_power_limits(&converged_handle, &limits, &result) ==
          LCC_OK);
+  assert(strcmp(result.executor_backend, "amw0") == 0);
   assert(!result.hardware_write);
 
   memset(&state, 0, sizeof(state));
@@ -168,10 +172,39 @@ void lcc_run_backend_converged_tests(void) {
 
   assert(lcc_backend_apply_fan_table(&converged_handle, "M4T1", &result) ==
          LCC_OK);
+  assert(strcmp(result.executor_backend, "amw0") == 0);
   assert(!result.hardware_write);
 
   memset(&state, 0, sizeof(state));
   assert(lcc_backend_read_state(&converged_handle, &state, &result) == LCC_OK);
   assert(strcmp(state.effective.fan_table, "M4T1") == 0);
   assert(strcmp(state.effective.profile, "custom") == 0);
+
+  (void)snprintf(path, sizeof(path), "%s/firmware/acpi/platform_profile", root);
+  assert(unlink(path) == 0);
+  (void)snprintf(path, sizeof(path), "%s/class/hwmon/hwmon0/temp1_input", root);
+  assert(unlink(path) == 0);
+  (void)snprintf(path, sizeof(path), "%s/class/hwmon/hwmon0/temp2_input", root);
+  assert(unlink(path) == 0);
+  (void)snprintf(path, sizeof(path), "%s/class/hwmon/hwmon0/fan1_input", root);
+  assert(unlink(path) == 0);
+  (void)snprintf(path, sizeof(path), "%s/class/hwmon/hwmon0/fan2_input", root);
+  assert(unlink(path) == 0);
+  (void)snprintf(path, sizeof(path), "%s/class/thermal/thermal_zone0/temp",
+                 root);
+  assert(unlink(path) == 0);
+  (void)snprintf(path, sizeof(path),
+                 "%s/class/powercap/intel-rapl:0/constraint_0_power_limit_uw",
+                 root);
+  assert(unlink(path) == 0);
+  (void)snprintf(path, sizeof(path),
+                 "%s/class/powercap/intel-rapl:0/constraint_1_power_limit_uw",
+                 root);
+  assert(unlink(path) == 0);
+
+  memset(&state, 0, sizeof(state));
+  assert(lcc_backend_read_state(&converged_handle, &state, &result) == LCC_OK);
+  assert(strcmp(state.backend_name, "amw0") == 0);
+  assert(strcmp(result.executor_backend, "amw0") == 0);
+  assert(strstr(result.detail, "fell back from standard to amw0") != NULL);
 }

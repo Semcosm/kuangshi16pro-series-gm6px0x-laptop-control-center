@@ -59,11 +59,14 @@ static void test_amw0_backend_dry_run_apply(void) {
   assert(strcmp(state.backend_name, "amw0") == 0);
   assert(strcmp(state.backend_selected, "amw0") == 0);
   assert(strcmp(state.execution.apply_power_limits, "amw0") == 0);
+  assert(strcmp(result.executor_backend, "amw0") == 0);
   assert(strcmp(state.effective.profile, "office") == 0);
 
   assert(lcc_backend_apply_mode(&backend, LCC_MODE_TURBO, &result) == LCC_OK);
   assert(result.changed);
   assert(!result.hardware_write);
+  assert(strcmp(result.executor_backend, "amw0") == 0);
+  assert(strcmp(result.stage, "set-mode-control") == 0);
 
   memset(&state, 0, sizeof(state));
   assert(lcc_backend_read_state(&backend, &state, &result) == LCC_OK);
@@ -81,6 +84,8 @@ static void test_amw0_backend_dry_run_apply(void) {
   assert(lcc_backend_apply_power_limits(&backend, &limits, &result) == LCC_OK);
   assert(result.changed);
   assert(!result.hardware_write);
+  assert(strcmp(result.executor_backend, "amw0") == 0);
+  assert(strcmp(result.stage, "write-tcc-offset") == 0);
 
   memset(&state, 0, sizeof(state));
   assert(lcc_backend_read_state(&backend, &state, &result) == LCC_OK);
@@ -121,6 +126,7 @@ static void test_amw0_fan_table_dry_run_apply_order(void) {
   assert(lcc_backend_apply_fan_table(&backend, "M4T1", &result) == LCC_OK);
   assert(result.changed);
   assert(!result.hardware_write);
+  assert(strcmp(result.executor_backend, "amw0") == 0);
 
   memset(&state, 0, sizeof(state));
   assert(lcc_backend_read_state(&backend, &state, &result) == LCC_OK);
@@ -192,6 +198,7 @@ static void test_amw0_transaction_fan_failure_stage(void) {
   assert(manager.state_cache.transaction.state == LCC_TRANSACTION_STATE_FAILED);
   assert(strcmp(manager.state_cache.transaction.stage,
                 "FanTable_Manager1p5::SetEcFanTable_Gpu") == 0);
+  assert(strcmp(manager.state_cache.last_apply.backend, "amw0") == 0);
   assert(strcmp(manager.state_cache.transaction.pending_target.fan_table,
                 "M4T1") == 0);
   assert(strcmp(manager.state_cache.effective.fan_table, "system-default") == 0);
