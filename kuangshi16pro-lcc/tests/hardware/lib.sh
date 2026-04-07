@@ -50,6 +50,57 @@ lcc_hw_require_file() {
   fi
 }
 
+lcc_hw_json_has_key() {
+  local file="$1"
+  local key="$2"
+
+  if [[ ! -f "$file" ]]; then
+    return 1
+  fi
+
+  grep -q "\"$key\":" "$file"
+}
+
+lcc_hw_collect_missing_state_keys() {
+  local file="$1"
+  local missing=()
+  local key=""
+  local required_keys=(
+    backend
+    backend_selected
+    backend_fallback_reason
+    last_apply_stage
+    last_apply_error
+    last_apply_backend
+  )
+
+  for key in "${required_keys[@]}"; do
+    if ! lcc_hw_json_has_key "$file" "$key"; then
+      missing+=("$key")
+    fi
+  done
+
+  if [[ "${#missing[@]}" -gt 0 ]]; then
+    printf '%s\n' "$(IFS=,; printf '%s' "${missing[*]}")"
+    return 0
+  fi
+
+  printf '\n'
+}
+
+lcc_hw_require_state_contract() {
+  local file="$1"
+  local missing=""
+
+  missing="$(lcc_hw_collect_missing_state_keys "$file")"
+  if [[ -n "$missing" ]]; then
+    printf 'state contract missing keys: %s\n' "$missing" >&2
+    return 1
+  fi
+
+  return 0
+}
+
 lcc_hw_json_get() {
   local file="$1"
   local key="$2"
@@ -64,7 +115,7 @@ lcc_hw_json_get() {
   match="$(grep -o "\"$key\":\\(\"[^\"]*\"\\|null\\|true\\|false\\|[0-9][0-9]*\\)" \
     "$file" | head -n 1 || true)"
   if [[ -z "$match" ]]; then
-    printf 'none\n'
+    printf 'missing\n'
     return 0
   fi
 
@@ -83,10 +134,22 @@ lcc_hw_write_summary() {
   local summary_file="$2"
   local command_rc="$3"
   local state_rc="$4"
+  local state_contract="not-captured"
+  local missing_keys=""
+
+  if [[ "$state_rc" -eq 0 ]]; then
+    missing_keys="$(lcc_hw_collect_missing_state_keys "$state_file")"
+    if [[ -n "$missing_keys" ]]; then
+      state_contract="missing:${missing_keys}"
+    else
+      state_contract="ok"
+    fi
+  fi
 
   {
     printf 'command_exit_code=%s\n' "$command_rc"
     printf 'state_capture=%s\n' "$([[ "$state_rc" -eq 0 ]] && printf 'ok' || printf 'failed')"
+    printf 'state_contract=%s\n' "$state_contract"
     printf 'backend=%s\n' "$(lcc_hw_json_get "$state_file" "backend")"
     printf 'backend_selected=%s\n' \
       "$(lcc_hw_json_get "$state_file" "backend_selected")"

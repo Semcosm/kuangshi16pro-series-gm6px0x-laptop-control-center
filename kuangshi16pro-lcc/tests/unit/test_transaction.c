@@ -11,6 +11,10 @@
 #include "daemon/manager.h"
 #include "daemon/transaction.h"
 
+typedef struct {
+  lcc_state_snapshot_t state;
+} lcc_route_failure_backend_t;
+
 static void make_dir(const char *path) {
   assert(path != NULL);
   assert(mkdir(path, 0700) == 0 || errno == EEXIST);
@@ -52,6 +56,78 @@ static void init_fake_sysfs(char *root, size_t root_len) {
   make_dir(path);
   (void)snprintf(path, sizeof(path), "%s/firmware/acpi/platform_profile", root);
   write_text_file(path, "performance\n");
+}
+
+static lcc_status_t route_failure_probe(void *ctx,
+                                        lcc_backend_capabilities_t *capabilities,
+                                        lcc_backend_result_t *result) {
+  (void)ctx;
+
+  assert(capabilities != NULL);
+  memset(capabilities, 0, sizeof(*capabilities));
+  capabilities->can_read_state = true;
+  capabilities->can_apply_mode = true;
+  lcc_backend_result_reset(result);
+  return LCC_OK;
+}
+
+static lcc_status_t route_failure_read_state(void *ctx,
+                                             lcc_state_snapshot_t *state,
+                                             lcc_backend_result_t *result) {
+  lcc_route_failure_backend_t *backend = ctx;
+
+  assert(backend != NULL);
+  assert(state != NULL);
+  memset(state, 0, sizeof(*state));
+  *state = backend->state;
+  lcc_backend_result_reset(result);
+  return LCC_OK;
+}
+
+static lcc_status_t route_failure_apply_mode(void *ctx,
+                                             lcc_operating_mode_t mode,
+                                             lcc_backend_result_t *result) {
+  (void)ctx;
+  (void)mode;
+
+  lcc_backend_result_reset(result);
+  lcc_backend_result_set_detail(result,
+                                "route test backend rejected mode apply");
+  return LCC_ERR_NOT_SUPPORTED;
+}
+
+static const lcc_backend_ops_t route_failure_backend_ops = {
+    .name = "route-test",
+    .kind = LCC_BACKEND_MOCK,
+    .probe = route_failure_probe,
+    .read_state = route_failure_read_state,
+    .apply_profile = NULL,
+    .apply_mode = route_failure_apply_mode,
+    .apply_power_limits = NULL,
+    .apply_fan_table = NULL,
+};
+
+static void init_route_failure_backend(lcc_route_failure_backend_t *route_backend,
+                                       lcc_backend_t *backend) {
+  assert(route_backend != NULL);
+  assert(backend != NULL);
+
+  memset(route_backend, 0, sizeof(*route_backend));
+  assert(lcc_backend_copy_text(route_backend->state.backend_name,
+                               sizeof(route_backend->state.backend_name),
+                               "route-test") == LCC_OK);
+  assert(lcc_backend_copy_text(route_backend->state.backend_selected,
+                               sizeof(route_backend->state.backend_selected),
+                               "route-test") == LCC_OK);
+  assert(lcc_backend_execution_set_all(&route_backend->state.execution,
+                                       "route-test") == LCC_OK);
+  assert(lcc_backend_copy_text(route_backend->state.requested.profile,
+                               sizeof(route_backend->state.requested.profile),
+                               "balanced") == LCC_OK);
+  assert(lcc_backend_copy_text(route_backend->state.effective.profile,
+                               sizeof(route_backend->state.effective.profile),
+                               "balanced") == LCC_OK);
+  lcc_backend_bind(backend, &route_failure_backend_ops, route_backend);
 }
 
 static void test_transaction_happy_path(void) {
@@ -151,9 +227,36 @@ static void test_transaction_capability_gate_records_state(void) {
   assert(manager.state_cache.last_apply.backend[0] == '\0');
 }
 
+static void test_transaction_backend_route_failure_records_state(void) {
+  lcc_backend_t backend;
+  lcc_route_failure_backend_t route_backend;
+  lcc_manager_t manager;
+  lcc_transaction_request_t request;
+
+  init_route_failure_backend(&route_backend, &backend);
+  assert(lcc_manager_init(&manager, &backend, NULL) == LCC_OK);
+
+  request.kind = LCC_TRANSACTION_MODE;
+  request.input.mode_name = "turbo";
+  assert(lcc_transaction_execute(&manager, &request) == LCC_ERR_NOT_SUPPORTED);
+  assert(manager.state_cache.transaction.state == LCC_TRANSACTION_STATE_FAILED);
+  assert(strcmp(manager.state_cache.transaction.stage, "backend-route") == 0);
+  assert(manager.state_cache.transaction.has_pending_target);
+  assert(strcmp(manager.state_cache.transaction.pending_target.profile,
+                "turbo") == 0);
+  assert(strcmp(manager.state_cache.last_apply.stage, "backend-route") == 0);
+  assert(manager.state_cache.last_apply.has_target);
+  assert(strcmp(manager.state_cache.last_apply.target.profile, "turbo") == 0);
+  assert(manager.state_cache.last_apply.error == LCC_ERR_NOT_SUPPORTED);
+  assert(manager.state_cache.last_apply.backend[0] == '\0');
+  assert(strcmp(manager.state_cache.requested.profile, "balanced") == 0);
+  assert(strcmp(manager.state_cache.effective.profile, "balanced") == 0);
+}
+
 void lcc_run_transaction_tests(void) {
   test_transaction_happy_path();
   test_transaction_failure_path();
   test_transaction_preflight_failure_records_state();
   test_transaction_capability_gate_records_state();
+  test_transaction_backend_route_failure_records_state();
 }

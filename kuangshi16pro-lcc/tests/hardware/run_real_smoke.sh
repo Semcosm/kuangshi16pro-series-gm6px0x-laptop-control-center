@@ -159,6 +159,10 @@ run_step() {
     run_failed=1
     return 1
   fi
+  if ! lcc_hw_require_state_contract "$step_dir/state.json"; then
+    run_failed=1
+    return 1
+  fi
 
   if [[ "$command_rc" -ne 0 ]] && ! step_allows_failure "$step_name"; then
     run_failed=1

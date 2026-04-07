@@ -69,8 +69,8 @@ temporary runtime override to `lccd.service` for the duration of the run.
 - expected diagnostics: `last_apply_backend=amw0` on mutating success or
   write-path failure
 
-`mixed-availability`
-: leave backend selection converged
+`mixed`
+: converged selection with mixed backend availability
 
 - expected focus: `backend_selected`, `execution`, and `last_apply_backend`
   stay mutually explainable
@@ -128,6 +128,10 @@ The runner also prints a condensed console summary for:
 - `last_apply_stage`
 - `last_apply_error`
 - `last_apply_backend`
+
+When `state` capture succeeds, the hardware runner treats selected diagnostic
+keys as a contract: the key must exist in JSON even when its value is `null`.
+Missing keys are treated as a regression; `null` values remain valid state.
 
 Before any step assertions, the runner records `systemctl show -p Environment`
 for `lccd.service` and fails fast if the selected matrix override is not
