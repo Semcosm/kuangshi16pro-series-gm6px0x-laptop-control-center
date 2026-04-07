@@ -90,11 +90,11 @@ lcc_hw_collect_missing_state_keys() {
 
 lcc_hw_require_state_contract() {
   local file="$1"
-  local missing=""
+  local missing_keys=""
 
-  missing="$(lcc_hw_collect_missing_state_keys "$file")"
-  if [[ -n "$missing" ]]; then
-    printf 'state contract missing keys: %s\n' "$missing" >&2
+  missing_keys="$(lcc_hw_collect_missing_state_keys "$file")"
+  if [[ -n "$missing_keys" ]]; then
+    printf 'state contract missing keys: %s\n' "$missing_keys" >&2
     return 1
   fi
 
