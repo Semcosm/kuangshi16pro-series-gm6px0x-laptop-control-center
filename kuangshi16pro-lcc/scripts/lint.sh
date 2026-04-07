@@ -18,7 +18,7 @@ for file in "${shell_files[@]}"; do
 done
 
 if command -v shellcheck >/dev/null 2>&1; then
-  shellcheck "${shell_files[@]}"
+  shellcheck -x "${shell_files[@]}"
 fi
 
 if git -C "$repo_root" grep -nI '[[:blank:]]$' -- \

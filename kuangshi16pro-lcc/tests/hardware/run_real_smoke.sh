@@ -2,7 +2,7 @@
 set -euo pipefail
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-# shellcheck source=tests/hardware/lib.sh
+# shellcheck source=kuangshi16pro-lcc/tests/hardware/lib.sh
 source "$script_dir/lib.sh"
 
 project_dir="$(lcc_hw_project_dir)"
@@ -218,7 +218,8 @@ skip_power=$skip_power
 skip_fan=$skip_fan
 EOF
 cp "$override_tmp" "$run_dir/service-override.conf"
-sudo systemctl show -p Environment "$service_name" >"$run_dir/service-environment.txt"
+sudo systemctl show -p Environment "$service_name" \
+  | tee "$run_dir/service-environment.txt" >/dev/null
 
 lcc_hw_log "artifacts: $run_dir"
 lcc_hw_log "matrix: $matrix"

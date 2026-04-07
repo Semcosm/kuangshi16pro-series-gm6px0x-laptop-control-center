@@ -124,12 +124,12 @@ lcc_hw_capture_journal() {
 
   if [[ -n "$cursor" ]]; then
     sudo journalctl -u "$service_name" --after-cursor "$cursor" \
-      -n "$lines" --no-pager -o short-iso >"$output_file"
+      -n "$lines" --no-pager -o short-iso | tee "$output_file" >/dev/null
     return 0
   fi
 
   sudo journalctl -u "$service_name" -n "$lines" --no-pager -o short-iso \
-    >"$output_file"
+    | tee "$output_file" >/dev/null
 }
 
 lcc_hw_write_matrix_override() {
