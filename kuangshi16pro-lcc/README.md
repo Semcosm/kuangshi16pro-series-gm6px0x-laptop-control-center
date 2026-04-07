@@ -78,6 +78,8 @@ Development helpers:
   start `lccd` on a temporary user bus
 - `bash kuangshi16pro-lcc/tests/integration/test_dbus_smoke.sh`
   run the mock-backed D-Bus integration smoke test
+- `bash kuangshi16pro-lcc/tests/hardware/run_real_smoke.sh`
+  run the real-machine smoke runner against the installed system-bus `lccd`
 - `bash kuangshi16pro-lcc/scripts/smoke-test.sh`
   build, launch `lccd` on a temporary user bus, and call the D-Bus API
 
