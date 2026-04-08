@@ -27,14 +27,24 @@ Reproduce the `GCUService.exe` service layer on Linux:
 
 UI comes later.
 
-## Active Delivery Line
+## Recently Completed
 
 1. `PR13A`
-   finishing/core: assert contracts, pin route attribution, and converge the
-   deployment surface across docs, source, and checked-in system assets
+   completed finishing/core: asserted contracts, pinned route attribution, and
+   converged the deployment surface across docs, source, and checked-in system
+   assets
 2. `PR13B`
-   build/install: productize install, uninstall, staging, and install-smoke for
-   the already-existing deployment assets
+   completed build/install: productized install, uninstall, staging, and
+   install-smoke for the already-existing deployment assets
+
+## Current Follow-Up
+
+- keep hardware validation centered on `sudo make -C kuangshi16pro-lcc install`
+  plus `systemctl daemon-reload` and `enable --now`
+- run and record the real-machine matrix against the installed system-bus
+  daemon, not ad hoc build-tree paths
+- keep extending product-facing service behavior and validation around the
+  installed daemon path while reverse work continues
 
 ## Reverse Priorities
 

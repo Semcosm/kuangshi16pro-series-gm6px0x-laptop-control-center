@@ -21,19 +21,12 @@ Recommended preparation:
    make -C kuangshi16pro-lcc install-smoke
    ```
 
-2. Install or refresh the system assets used by the smoke runner:
+2. Install or refresh the deployed daemon and system assets used by the smoke
+   runner:
 
    ```bash
    sudo make -C kuangshi16pro-lcc install
    ```
-
-   Default install destinations:
-
-   - `/usr/lib/kuangshi16pro-lcc/lccd`
-   - `/etc/systemd/system/lccd.service`
-   - `/usr/share/dbus-1/system-services/io.github.semcosm.Lcc1.service`
-   - `/etc/dbus-1/system.d/io.github.semcosm.Lcc1.conf`
-   - `/usr/share/polkit-1/actions/io.github.semcosm.Lcc1.policy`
 
 3. Reload and start the daemon:
 
