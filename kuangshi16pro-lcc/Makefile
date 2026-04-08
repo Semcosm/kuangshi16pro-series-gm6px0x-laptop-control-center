@@ -6,10 +6,18 @@ SYSTEMD_CFLAGS := $(shell $(PKG_CONFIG) --cflags libsystemd 2>/dev/null)
 SYSTEMD_LIBS := $(shell $(PKG_CONFIG) --libs libsystemd 2>/dev/null)
 POLKIT_CFLAGS := $(shell $(PKG_CONFIG) --cflags polkit-gobject-1 2>/dev/null)
 POLKIT_LIBS := $(shell $(PKG_CONFIG) --libs polkit-gobject-1 2>/dev/null)
+POLKIT_AGENT_AVAILABLE := $(shell $(PKG_CONFIG) --exists polkit-agent-1 && printf 'yes')
+ifeq ($(POLKIT_AGENT_AVAILABLE),yes)
 POLKIT_AGENT_CFLAGS := $(shell $(PKG_CONFIG) --cflags polkit-agent-1 2>/dev/null)
 POLKIT_AGENT_LIBS := $(shell $(PKG_CONFIG) --libs polkit-agent-1 2>/dev/null)
+POLKIT_AGENT_CPPFLAGS := -DLCC_HAVE_POLKIT_AGENT=1 -DPOLKIT_AGENT_I_KNOW_API_IS_SUBJECT_TO_CHANGE
+else
+POLKIT_AGENT_CFLAGS :=
+POLKIT_AGENT_LIBS :=
+POLKIT_AGENT_CPPFLAGS :=
+endif
 
-CPPFLAGS ?= -Iinclude -Isrc $(SYSTEMD_CFLAGS) $(POLKIT_CFLAGS) $(POLKIT_AGENT_CFLAGS) -DPOLKIT_AGENT_I_KNOW_API_IS_SUBJECT_TO_CHANGE
+CPPFLAGS ?= -Iinclude -Isrc $(SYSTEMD_CFLAGS) $(POLKIT_CFLAGS) $(POLKIT_AGENT_CFLAGS) $(POLKIT_AGENT_CPPFLAGS)
 CFLAGS_BASE := -std=c11 -Wall -Wextra -Wpedantic -Wshadow -Wconversion -Wformat=2
 RELEASE_CFLAGS := -O2
 DEBUG_CFLAGS := -O0 -g3 -fsanitize=address,undefined -fno-omit-frame-pointer

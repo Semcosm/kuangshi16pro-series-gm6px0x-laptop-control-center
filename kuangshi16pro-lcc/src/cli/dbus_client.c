@@ -4,19 +4,27 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
+#ifdef LCC_HAVE_POLKIT_AGENT
 #include <unistd.h>
 
 #include <polkit/polkit.h>
 #include <polkitagent/polkitagent.h>
+#endif
 #include <systemd/sd-bus.h>
 
 static const char *const lcc_bus_name = "io.github.semcosm.Lcc1";
 static const char *const lcc_object_path = "/io/github/semcosm/Lcc1";
 
+#ifdef LCC_HAVE_POLKIT_AGENT
 typedef struct {
   PolkitAgentListener *listener;
   gpointer registration_handle;
 } lcc_cli_polkit_agent_t;
+#else
+typedef struct {
+  int unused;
+} lcc_cli_polkit_agent_t;
+#endif
 
 static lcc_status_t dbus_error_to_status(const sd_bus_error *error, int r) {
   if (error != NULL && sd_bus_error_is_set(error) > 0) {
@@ -82,6 +90,7 @@ static lcc_status_t open_bus(bool use_user_bus, sd_bus **bus) {
   return LCC_OK;
 }
 
+#ifdef LCC_HAVE_POLKIT_AGENT
 static lcc_status_t lcc_cli_register_polkit_agent(bool use_user_bus,
                                                   lcc_cli_polkit_agent_t *agent) {
   PolkitSubject *subject = NULL;
@@ -156,6 +165,18 @@ static void lcc_cli_unregister_polkit_agent(lcc_cli_polkit_agent_t *agent) {
     agent->listener = NULL;
   }
 }
+#else
+static lcc_status_t lcc_cli_register_polkit_agent(bool use_user_bus,
+                                                  lcc_cli_polkit_agent_t *agent) {
+  (void)use_user_bus;
+  (void)agent;
+  return LCC_OK;
+}
+
+static void lcc_cli_unregister_polkit_agent(lcc_cli_polkit_agent_t *agent) {
+  (void)agent;
+}
+#endif
 
 static lcc_status_t call_string_method(bool use_user_bus, const char *interface,
                                        const char *method, char *buffer,

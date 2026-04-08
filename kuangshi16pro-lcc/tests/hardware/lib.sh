@@ -226,7 +226,7 @@ lcc_hw_validate_step_contract() {
     fi
 
     matched=1
-    field="${line#${step_name}.}"
+    field="${line#"${step_name}".}"
     field="${field%%=*}"
     expected="${line#*=}"
     actual="$(lcc_hw_summary_get "$summary_file" "$field")"
