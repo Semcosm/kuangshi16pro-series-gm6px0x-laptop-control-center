@@ -35,6 +35,7 @@ Build:
 
 - `make -C kuangshi16pro-lcc`
 - `make -C kuangshi16pro-lcc test`
+- `make -C kuangshi16pro-lcc install-smoke`
 - `bash kuangshi16pro-lcc/scripts/lint.sh`
 - `./kuangshi16pro-lcc/build/lccctl --help`
 - `./kuangshi16pro-lcc/build/lccd --help`
@@ -81,6 +82,8 @@ Development helpers:
   start `lccd` on a temporary user bus
 - `bash kuangshi16pro-lcc/tests/integration/test_dbus_smoke.sh`
   run the mock-backed D-Bus integration smoke test
+- `bash kuangshi16pro-lcc/tests/integration/test_install_smoke.sh`
+  stage an install tree, validate deployment assets, and verify uninstall cleanup
 - `bash kuangshi16pro-lcc/tests/hardware/run_real_smoke.sh`
   run the real-machine smoke runner against the installed system-bus `lccd`
 - `bash kuangshi16pro-lcc/scripts/smoke-test.sh`

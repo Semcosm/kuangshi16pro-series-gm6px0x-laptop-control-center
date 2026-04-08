@@ -13,22 +13,27 @@ installed on the laptop under test.
 
 Recommended preparation:
 
-1. Build the current tree:
+1. Build and preflight the current tree:
 
    ```bash
    make -C kuangshi16pro-lcc
+   make -C kuangshi16pro-lcc test
+   make -C kuangshi16pro-lcc install-smoke
    ```
 
 2. Install or refresh the system assets used by the smoke runner:
 
-   - `build/lccd` at `/usr/lib/kuangshi16pro-lcc/lccd`
-   - `systemd/lccd.service` at `/etc/systemd/system/lccd.service`
-   - `systemd/dbus-io.github.semcosm.Lcc1.service` at
-     `/usr/share/dbus-1/system-services/io.github.semcosm.Lcc1.service`
-   - `dbus/io.github.semcosm.Lcc1.conf` at
-     `/etc/dbus-1/system.d/io.github.semcosm.Lcc1.conf`
-   - `dbus/io.github.semcosm.Lcc1.policy` at
-     `/usr/share/polkit-1/actions/io.github.semcosm.Lcc1.policy`
+   ```bash
+   sudo make -C kuangshi16pro-lcc install
+   ```
+
+   Default install destinations:
+
+   - `/usr/lib/kuangshi16pro-lcc/lccd`
+   - `/etc/systemd/system/lccd.service`
+   - `/usr/share/dbus-1/system-services/io.github.semcosm.Lcc1.service`
+   - `/etc/dbus-1/system.d/io.github.semcosm.Lcc1.conf`
+   - `/usr/share/polkit-1/actions/io.github.semcosm.Lcc1.policy`
 
 3. Reload and start the daemon:
 

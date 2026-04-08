@@ -50,3 +50,14 @@ jobs:
           sudo apt-get install -y build-essential pkg-config libsystemd-dev libpolkit-gobject-1-dev dbus systemd shellcheck
       - name: Run integration smoke
         run: bash kuangshi16pro-lcc/tests/integration/test_dbus_smoke.sh
+
+  install-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install install-smoke dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential pkg-config libsystemd-dev libpolkit-gobject-1-dev
+      - name: Run install smoke
+        run: make -C kuangshi16pro-lcc install-smoke

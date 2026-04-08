@@ -73,3 +73,13 @@ Current checked-in path assumptions:
   `/etc/dbus-1/system.d/io.github.semcosm.Lcc1.conf`
 - the Polkit policy is installed as
   `/usr/share/polkit-1/actions/io.github.semcosm.Lcc1.policy`
+
+Makefile install productization:
+
+- `make install` and `make uninstall` now own the deployed file layout
+- staging installs use `DESTDIR`
+- install layout is parameterized through `PREFIX`, `BINDIR`, `LIBEXECDIR`,
+  `SYSTEMDUNITDIR`, `DBUSSYSTEMSERVICEDIR`, `DBUSSYSTEMCONFDIR`, and
+  `POLKITACTIONSDIR`
+- `make install-smoke` verifies staged install, rewritten `ExecStart`, and
+  uninstall cleanup without touching the live system

@@ -11,6 +11,7 @@ shell_files=(
   "$project_dir/scripts/smoke-test.sh"
   "$project_dir/tests/hardware/lib.sh"
   "$project_dir/tests/hardware/run_real_smoke.sh"
+  "$project_dir/tests/integration/test_install_smoke.sh"
   "$project_dir/tests/integration/test_dbus_smoke.sh"
 )
 

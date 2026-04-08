@@ -1,5 +1,6 @@
 CC ?= cc
 PKG_CONFIG ?= pkg-config
+INSTALL ?= install
 
 SYSTEMD_CFLAGS := $(shell $(PKG_CONFIG) --cflags libsystemd 2>/dev/null)
 SYSTEMD_LIBS := $(shell $(PKG_CONFIG) --libs libsystemd 2>/dev/null)
@@ -20,6 +21,18 @@ OBJ_DIR := $(BUILD_DIR)/obj
 BIN := $(BUILD_DIR)/lccctl
 DAEMON_BIN := $(BUILD_DIR)/lccd
 TEST_BIN := $(BUILD_DIR)/test_kuangshi16pro_lcc
+PREFIX ?= /usr
+DESTDIR ?=
+BINDIR ?= $(PREFIX)/bin
+LIBEXECDIR ?= $(PREFIX)/lib/kuangshi16pro-lcc
+SYSTEMDUNITDIR ?= /etc/systemd/system
+DBUSSYSTEMSERVICEDIR ?= $(PREFIX)/share/dbus-1/system-services
+DBUSSYSTEMCONFDIR ?= /etc/dbus-1/system.d
+POLKITACTIONSDIR ?= $(PREFIX)/share/polkit-1/actions
+SYSTEMD_UNIT_SRC := systemd/lccd.service
+DBUS_SERVICE_SRC := systemd/dbus-io.github.semcosm.Lcc1.service
+DBUS_CONFIG_SRC := dbus/io.github.semcosm.Lcc1.conf
+POLKIT_POLICY_SRC := dbus/io.github.semcosm.Lcc1.policy
 
 COMMON_SRCS := \
 	$(SRC_DIR)/common/lcc_error.c \
@@ -109,7 +122,7 @@ TEST_OBJS := $(patsubst %.c,$(OBJ_DIR)/%.o,$(TEST_SRCS))
 
 CFLAGS ?= $(CFLAGS_BASE) $(RELEASE_CFLAGS)
 
-.PHONY: all clean debug test run daemon
+.PHONY: all clean debug test run daemon install uninstall install-bin install-assets install-smoke
 
 all: $(BIN) $(DAEMON_BIN)
 
@@ -124,6 +137,47 @@ run: $(BIN)
 
 daemon: $(DAEMON_BIN)
 	$(DAEMON_BIN) --help
+
+install: all install-bin install-assets
+
+install-bin: $(BIN) $(DAEMON_BIN)
+	$(INSTALL) -d -m 0755 "$(DESTDIR)$(BINDIR)" "$(DESTDIR)$(LIBEXECDIR)"
+	$(INSTALL) -m 0755 "$(BIN)" "$(DESTDIR)$(BINDIR)/lccctl"
+	$(INSTALL) -m 0755 "$(DAEMON_BIN)" "$(DESTDIR)$(LIBEXECDIR)/lccd"
+
+install-assets:
+	$(INSTALL) -d -m 0755 \
+		"$(DESTDIR)$(SYSTEMDUNITDIR)" \
+		"$(DESTDIR)$(DBUSSYSTEMSERVICEDIR)" \
+		"$(DESTDIR)$(DBUSSYSTEMCONFDIR)" \
+		"$(DESTDIR)$(POLKITACTIONSDIR)"
+	$(INSTALL) -m 0644 /dev/null "$(DESTDIR)$(SYSTEMDUNITDIR)/lccd.service"
+	sed 's|^ExecStart=.*|ExecStart=$(LIBEXECDIR)/lccd --system|' \
+		"$(SYSTEMD_UNIT_SRC)" >"$(DESTDIR)$(SYSTEMDUNITDIR)/lccd.service"
+	$(INSTALL) -m 0644 "$(DBUS_SERVICE_SRC)" \
+		"$(DESTDIR)$(DBUSSYSTEMSERVICEDIR)/io.github.semcosm.Lcc1.service"
+	$(INSTALL) -m 0644 "$(DBUS_CONFIG_SRC)" \
+		"$(DESTDIR)$(DBUSSYSTEMCONFDIR)/io.github.semcosm.Lcc1.conf"
+	$(INSTALL) -m 0644 "$(POLKIT_POLICY_SRC)" \
+		"$(DESTDIR)$(POLKITACTIONSDIR)/io.github.semcosm.Lcc1.policy"
+
+uninstall:
+	rm -f \
+		"$(DESTDIR)$(BINDIR)/lccctl" \
+		"$(DESTDIR)$(LIBEXECDIR)/lccd" \
+		"$(DESTDIR)$(SYSTEMDUNITDIR)/lccd.service" \
+		"$(DESTDIR)$(DBUSSYSTEMSERVICEDIR)/io.github.semcosm.Lcc1.service" \
+		"$(DESTDIR)$(DBUSSYSTEMCONFDIR)/io.github.semcosm.Lcc1.conf" \
+		"$(DESTDIR)$(POLKITACTIONSDIR)/io.github.semcosm.Lcc1.policy"
+	-rmdir -p --ignore-fail-on-non-empty "$(DESTDIR)$(LIBEXECDIR)"
+	-rmdir -p --ignore-fail-on-non-empty "$(DESTDIR)$(BINDIR)"
+	-rmdir -p --ignore-fail-on-non-empty "$(DESTDIR)$(SYSTEMDUNITDIR)"
+	-rmdir -p --ignore-fail-on-non-empty "$(DESTDIR)$(DBUSSYSTEMSERVICEDIR)"
+	-rmdir -p --ignore-fail-on-non-empty "$(DESTDIR)$(DBUSSYSTEMCONFDIR)"
+	-rmdir -p --ignore-fail-on-non-empty "$(DESTDIR)$(POLKITACTIONSDIR)"
+
+install-smoke:
+	bash "$(TEST_DIR)/integration/test_install_smoke.sh"
 
 clean:
 	rm -rf $(BUILD_DIR)
