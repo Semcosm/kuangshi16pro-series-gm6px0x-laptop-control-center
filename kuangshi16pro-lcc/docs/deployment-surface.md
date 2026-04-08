@@ -20,6 +20,10 @@ Current product assets:
   system-bus policy for the stable v1 surface
 - `dbus/io.github.semcosm.Lcc1.policy`
   Polkit action definitions for mutating methods
+- `../LICENSE`
+  project license installed with the package payload
+- `man/lccctl.1` and `man/lccd.8`
+  packaged man pages for the CLI and daemon
 
 ## Naming Contract
 
@@ -67,12 +71,20 @@ Current checked-in path assumptions:
 - `lccd.service` owns `BusName=io.github.semcosm.Lcc1`
 - `lccd.service` starts the daemon with
   `ExecStart=/usr/lib/kuangshi16pro-lcc/lccd --system`
+- the systemd unit is installed as
+  `/usr/lib/systemd/system/lccd.service`
 - D-Bus activation stays declarative with
   `Name=io.github.semcosm.Lcc1` and `SystemdService=lccd.service`
+- the D-Bus activation file is installed as
+  `/usr/share/dbus-1/system-services/io.github.semcosm.Lcc1.service`
 - the system-bus config is installed as
-  `/etc/dbus-1/system.d/io.github.semcosm.Lcc1.conf`
+  `/usr/share/dbus-1/system.d/io.github.semcosm.Lcc1.conf`
 - the Polkit policy is installed as
   `/usr/share/polkit-1/actions/io.github.semcosm.Lcc1.policy`
+- the package license is installed as
+  `/usr/share/licenses/kuangshi16pro-lcc/LICENSE`
+- the packaged man pages are installed as
+  `/usr/share/man/man1/lccctl.1` and `/usr/share/man/man8/lccd.8`
 
 Makefile install productization:
 
@@ -80,6 +92,6 @@ Makefile install productization:
 - staging installs use `DESTDIR`
 - install layout is parameterized through `PREFIX`, `BINDIR`, `LIBEXECDIR`,
   `SYSTEMDUNITDIR`, `DBUSSYSTEMSERVICEDIR`, `DBUSSYSTEMCONFDIR`, and
-  `POLKITACTIONSDIR`
+  `POLKITACTIONSDIR`, `LICENSEDIR`, `MAN1DIR`, and `MAN8DIR`
 - `make install-smoke` verifies staged install, rewritten `ExecStart`, and
   uninstall cleanup without touching the live system

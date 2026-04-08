@@ -1,0 +1,94 @@
+.TH LCCCTL 1 "2026-04-08" "kuangshi16pro-lcc" "User Commands"
+.SH NAME
+lccctl \- D-Bus client for the Kuangshi16Pro Linux Control Center daemon
+.SH SYNOPSIS
+.B lccctl
+.I command
+.RI [ options ]
+.SH DESCRIPTION
+.B lccctl
+is the operator-facing command line client for
+.BR lccd (8).
+It reads state and capabilities over D-Bus and sends mutating requests through
+the daemon instead of writing hardware state directly.
+.SH COMMANDS
+.TP
+.B state
+Print the current daemon state as JSON.
+.TP
+.B status
+Alias for
+.BR state .
+.TP
+.B capabilities
+Print the capability model as JSON.
+.TP
+.B observe
+Read grouped state for one of
+.BR mode ,
+.BR power ,
+.BR fan ,
+.BR thermal ,
+or
+.BR all .
+.TP
+.B mode set MODE
+Request a new performance mode such as
+.BR office ,
+.BR turbo ,
+or
+.BR custom .
+.TP
+.B power set
+Apply power-limit changes using explicit numeric flags or a config file.
+.TP
+.B fan apply
+Apply a named fan preset or a config-driven fan table.
+.TP
+.B profile apply
+Apply a staged profile from a config file.
+.TP
+.B developer raw wmbc
+Send a low-level traced WMBC packet on the developer path.
+This bypasses the daemon and is intended only for diagnostics.
+.SH BUS SELECTION
+.TP
+.B --system-bus
+Use the system bus. This is the default.
+.TP
+.B --user-bus
+Use the user bus for development.
+.SH OTHER OPTIONS
+.TP
+.B --plan
+Print the staged local apply plan instead of calling
+.BR lccd .
+.SH FILES
+.TP
+.I /usr/bin/lccctl
+Installed CLI entrypoint.
+.TP
+.I /usr/lib/systemd/system/lccd.service
+Systemd unit that owns the deployed daemon.
+.SH NOTES
+System-bus mutating commands are authorized through polkit.
+On a graphical desktop this normally triggers an authentication prompt.
+On a text console, start
+.B pkttyagent
+or use the development-only
+.B --user-bus
+path.
+.SH EXAMPLES
+.TP
+.B lccctl capabilities
+Show the detected capability model.
+.TP
+.B lccctl state
+Read current daemon state over the system bus.
+.TP
+.B lccctl mode set turbo
+Request the turbo profile through the daemon.
+.SH SEE ALSO
+.BR lccd (8),
+.BR systemctl (1),
+.BR busctl (1)

@@ -28,3 +28,10 @@ windows-control-center/*.zip
 kuangshi16pro-lcc/build/
 kuangshi16pro-lcc/artifacts/hardware-smoke/
 chen_record.txt
+pkg/
+src/
+*.pkg.tar.*
+*.src.tar.*
+*.BUILDINFO
+*.MTREE
+*.PKGINFO

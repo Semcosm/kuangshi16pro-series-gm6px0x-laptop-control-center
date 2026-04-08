@@ -30,6 +30,7 @@ Start with:
 - `docs/profiles.md`
 - `docs/backend-amw0.md`
 - `docs/ci.md`
+- `docs/packaging-arch.md`
 
 Build:
 
@@ -37,6 +38,7 @@ Build:
 - `make -C kuangshi16pro-lcc test`
 - `make -C kuangshi16pro-lcc install-smoke`
 - `bash kuangshi16pro-lcc/scripts/lint.sh`
+- `makepkg -f`
 - `./kuangshi16pro-lcc/build/lccctl --help`
 - `./kuangshi16pro-lcc/build/lccd --help`
 
@@ -88,6 +90,10 @@ Development helpers:
   run the real-machine smoke runner against the installed system-bus `lccd`
 - `bash kuangshi16pro-lcc/scripts/smoke-test.sh`
   build, launch `lccd` on a temporary user bus, and call the D-Bus API
+- `man 1 lccctl`
+  packaged CLI reference
+- `man 8 lccd`
+  packaged daemon reference
 
 Current reverse-guided execution model:
 - `SetFanTableThread` delegates into `MyFanTableCtrl::SetFanTable`

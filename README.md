@@ -73,6 +73,10 @@ The only old `nbfc` naming was moved into `legacy-nbfc-configs/`.
   Linux-side mode/profile/fan/power object model
 - `kuangshi16pro-lcc/docs/backend-amw0.md`
   low-level AMW0 backend facts that are already proven
+- `PKGBUILD`
+  Arch Linux package recipe for building and installing the current repo snapshot
+- `kuangshi16pro-lcc/docs/packaging-arch.md`
+  Arch-specific build, cleanup, install, verification, and upgrade workflow
 - `kuangshi16pro-lcc/build/lccctl`
   first C-based Linux CLI skeleton after `make -C kuangshi16pro-lcc`
 - `kuangshi16pro-lcc/tests/fixtures/demo-profile.ini`
@@ -84,3 +88,5 @@ The only old `nbfc` naming was moved into `legacy-nbfc-configs/`.
 - vendor binaries, installer drops, and Windows capture directories are intentionally not required for a clean repo checkout.
 - `WQBA.bin` is treated the same way: useful locally, but not something the GitHub repo needs to carry.
 - the repository name uses Git-friendly ASCII; the full machine name remains in this README.
+- on Arch Linux, build an installable package from the repository root with `makepkg -f`
+- see `kuangshi16pro-lcc/docs/packaging-arch.md` for cleanup of legacy manual installs before switching to the packaged layout

@@ -31,6 +31,8 @@ Start here:
   current implementation baseline, next productization steps, and reverse priorities
 - `ci.md`
   GitHub Actions checks and the protected-branch required-check list
+- `packaging-arch.md`
+  Arch package build, install, verification, and manual-install cleanup steps
 
 These notes are curated for writing code. The full reverse-engineering record
 remains in the repository root and `windows-control-center/`.

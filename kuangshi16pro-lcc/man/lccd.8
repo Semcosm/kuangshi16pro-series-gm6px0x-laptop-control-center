@@ -1,0 +1,86 @@
+.TH LCCD 8 "2026-04-08" "kuangshi16pro-lcc" "System Manager's Manual"
+.SH NAME
+lccd \- system D-Bus daemon for the Kuangshi16Pro Linux Control Center
+.SH SYNOPSIS
+.B lccd
+.RB [ --user ]
+.RB [ --system ]
+.RB [ --capabilities
+.IR path ]
+.SH DESCRIPTION
+.B lccd
+is the privileged daemon that exposes the stable
+.B io.github.semcosm.Lcc1
+service on D-Bus.
+It owns backend selection, transaction execution, and authorization of
+mutating operations through polkit on the system bus.
+.SH OPTIONS
+.TP
+.B --system
+Connect to the system bus. This is the default.
+.TP
+.B --user
+Connect to the user bus for development.
+.TP
+.BI --capabilities " PATH"
+Override the capabilities JSON path used by the daemon.
+.SH ENVIRONMENT
+.TP
+.B LCC_BACKEND
+Force a backend selection of
+.BR standard ,
+.BR amw0 ,
+or
+.BR mock .
+.TP
+.B LCC_STANDARD_ROOT
+Override the sysfs root used by the standard backend.
+.TP
+.B LCC_AMW0_CALL_NODE
+Override the
+.I acpi_call
+node path used by the AMW0 backend.
+.TP
+.B LCC_AMW0_ECRR_PATH
+Override the detected AML ECRR path for AMW0 reads.
+.TP
+.B LCC_AMW0_DRY_RUN
+Keep AMW0 write operations in dry-run mode.
+.TP
+.B LCC_AMW0_TRACE_FILE
+Append internal AMW0 transport trace output to a file.
+.SH FILES
+.TP
+.I /usr/lib/kuangshi16pro-lcc/lccd
+Installed daemon binary.
+.TP
+.I /usr/lib/systemd/system/lccd.service
+Systemd unit used for the deployed service.
+.TP
+.I /usr/share/dbus-1/system-services/io.github.semcosm.Lcc1.service
+D-Bus activation metadata.
+.TP
+.I /usr/share/dbus-1/system.d/io.github.semcosm.Lcc1.conf
+System bus policy for the stable service surface.
+.TP
+.I /usr/share/polkit-1/actions/io.github.semcosm.Lcc1.policy
+Polkit action definitions for mutating methods.
+.SH OPERATING MODEL
+The daemon prefers the standard Linux backend for read-state operations when
+available, and falls back to AMW0 for write paths that are not exposed through
+standard Linux interfaces on this hardware family.
+.SH EXAMPLES
+.TP
+.B systemctl start lccd.service
+Start the packaged system service.
+.TP
+.B journalctl -u lccd.service -b
+Inspect boot-local daemon logs.
+.TP
+.B lccctl state
+Query the daemon over D-Bus.
+.SH SEE ALSO
+.BR lccctl (1),
+.BR systemctl (1),
+.BR journalctl (1),
+.BR busctl (1)

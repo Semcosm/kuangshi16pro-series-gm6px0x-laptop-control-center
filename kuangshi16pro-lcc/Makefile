@@ -36,14 +36,21 @@ PREFIX ?= /usr
 DESTDIR ?=
 BINDIR ?= $(PREFIX)/bin
 LIBEXECDIR ?= $(PREFIX)/lib/kuangshi16pro-lcc
-SYSTEMDUNITDIR ?= /etc/systemd/system
-DBUSSYSTEMSERVICEDIR ?= $(PREFIX)/share/dbus-1/system-services
-DBUSSYSTEMCONFDIR ?= /etc/dbus-1/system.d
-POLKITACTIONSDIR ?= $(PREFIX)/share/polkit-1/actions
+SYSTEMDUNITDIR ?= /usr/lib/systemd/system
+DBUSSYSTEMSERVICEDIR ?= /usr/share/dbus-1/system-services
+DBUSSYSTEMCONFDIR ?= /usr/share/dbus-1/system.d
+POLKITACTIONSDIR ?= /usr/share/polkit-1/actions
+LICENSEDIR ?= $(PREFIX)/share/licenses/kuangshi16pro-lcc
+MANDIR ?= $(PREFIX)/share/man
+MAN1DIR ?= $(MANDIR)/man1
+MAN8DIR ?= $(MANDIR)/man8
 SYSTEMD_UNIT_SRC := systemd/lccd.service
 DBUS_SERVICE_SRC := systemd/dbus-io.github.semcosm.Lcc1.service
 DBUS_CONFIG_SRC := dbus/io.github.semcosm.Lcc1.conf
 POLKIT_POLICY_SRC := dbus/io.github.semcosm.Lcc1.policy
+LICENSE_SRC := ../LICENSE
+LCCCTL_MAN_SRC := man/lccctl.1
+LCCD_MAN_SRC := man/lccd.8
 
 COMMON_SRCS := \
 	$(SRC_DIR)/common/lcc_error.c \
@@ -161,7 +168,10 @@ install-assets:
 		"$(DESTDIR)$(SYSTEMDUNITDIR)" \
 		"$(DESTDIR)$(DBUSSYSTEMSERVICEDIR)" \
 		"$(DESTDIR)$(DBUSSYSTEMCONFDIR)" \
-		"$(DESTDIR)$(POLKITACTIONSDIR)"
+		"$(DESTDIR)$(POLKITACTIONSDIR)" \
+		"$(DESTDIR)$(LICENSEDIR)" \
+		"$(DESTDIR)$(MAN1DIR)" \
+		"$(DESTDIR)$(MAN8DIR)"
 	$(INSTALL) -m 0644 /dev/null "$(DESTDIR)$(SYSTEMDUNITDIR)/lccd.service"
 	sed 's|^ExecStart=.*|ExecStart=$(LIBEXECDIR)/lccd --system|' \
 		"$(SYSTEMD_UNIT_SRC)" >"$(DESTDIR)$(SYSTEMDUNITDIR)/lccd.service"
@@ -171,6 +181,12 @@ install-assets:
 		"$(DESTDIR)$(DBUSSYSTEMCONFDIR)/io.github.semcosm.Lcc1.conf"
 	$(INSTALL) -m 0644 "$(POLKIT_POLICY_SRC)" \
 		"$(DESTDIR)$(POLKITACTIONSDIR)/io.github.semcosm.Lcc1.policy"
+	$(INSTALL) -m 0644 "$(LICENSE_SRC)" \
+		"$(DESTDIR)$(LICENSEDIR)/LICENSE"
+	$(INSTALL) -m 0644 "$(LCCCTL_MAN_SRC)" \
+		"$(DESTDIR)$(MAN1DIR)/lccctl.1"
+	$(INSTALL) -m 0644 "$(LCCD_MAN_SRC)" \
+		"$(DESTDIR)$(MAN8DIR)/lccd.8"
 
 uninstall:
 	rm -f \
@@ -179,13 +195,19 @@ uninstall:
 		"$(DESTDIR)$(SYSTEMDUNITDIR)/lccd.service" \
 		"$(DESTDIR)$(DBUSSYSTEMSERVICEDIR)/io.github.semcosm.Lcc1.service" \
 		"$(DESTDIR)$(DBUSSYSTEMCONFDIR)/io.github.semcosm.Lcc1.conf" \
-		"$(DESTDIR)$(POLKITACTIONSDIR)/io.github.semcosm.Lcc1.policy"
+		"$(DESTDIR)$(POLKITACTIONSDIR)/io.github.semcosm.Lcc1.policy" \
+		"$(DESTDIR)$(LICENSEDIR)/LICENSE" \
+		"$(DESTDIR)$(MAN1DIR)/lccctl.1" \
+		"$(DESTDIR)$(MAN8DIR)/lccd.8"
 	-rmdir -p --ignore-fail-on-non-empty "$(DESTDIR)$(LIBEXECDIR)"
 	-rmdir -p --ignore-fail-on-non-empty "$(DESTDIR)$(BINDIR)"
 	-rmdir -p --ignore-fail-on-non-empty "$(DESTDIR)$(SYSTEMDUNITDIR)"
 	-rmdir -p --ignore-fail-on-non-empty "$(DESTDIR)$(DBUSSYSTEMSERVICEDIR)"
 	-rmdir -p --ignore-fail-on-non-empty "$(DESTDIR)$(DBUSSYSTEMCONFDIR)"
 	-rmdir -p --ignore-fail-on-non-empty "$(DESTDIR)$(POLKITACTIONSDIR)"
+	-rmdir -p --ignore-fail-on-non-empty "$(DESTDIR)$(LICENSEDIR)"
+	-rmdir -p --ignore-fail-on-non-empty "$(DESTDIR)$(MAN1DIR)"
+	-rmdir -p --ignore-fail-on-non-empty "$(DESTDIR)$(MAN8DIR)"
 
 install-smoke:
 	bash "$(TEST_DIR)/integration/test_install_smoke.sh"
