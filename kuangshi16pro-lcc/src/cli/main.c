@@ -27,7 +27,7 @@ bool lcc_cli_parse_bus_flag(const char *arg, bool *use_user_bus) {
 static void lcc_cli_print_status_hint(lcc_status_t status) {
   switch (status) {
     case LCC_ERR_PERMISSION:
-      lcc_log_info("hint: mutating commands on the system bus are authorized through polkit; use an active desktop session or --user-bus for development");
+      lcc_log_info("hint: mutating commands on the system bus are authorized through polkit; use an active desktop session, or on a tty start pkttyagent --process $$ --fallback before retrying; use --user-bus for development");
       break;
     case LCC_ERR_NOT_FOUND:
       lcc_log_info("hint: ensure lccd is running and the D-Bus service files are installed");

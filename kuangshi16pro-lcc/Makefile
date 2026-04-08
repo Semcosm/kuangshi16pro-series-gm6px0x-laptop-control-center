@@ -6,8 +6,10 @@ SYSTEMD_CFLAGS := $(shell $(PKG_CONFIG) --cflags libsystemd 2>/dev/null)
 SYSTEMD_LIBS := $(shell $(PKG_CONFIG) --libs libsystemd 2>/dev/null)
 POLKIT_CFLAGS := $(shell $(PKG_CONFIG) --cflags polkit-gobject-1 2>/dev/null)
 POLKIT_LIBS := $(shell $(PKG_CONFIG) --libs polkit-gobject-1 2>/dev/null)
+POLKIT_AGENT_CFLAGS := $(shell $(PKG_CONFIG) --cflags polkit-agent-1 2>/dev/null)
+POLKIT_AGENT_LIBS := $(shell $(PKG_CONFIG) --libs polkit-agent-1 2>/dev/null)
 
-CPPFLAGS ?= -Iinclude -Isrc $(SYSTEMD_CFLAGS) $(POLKIT_CFLAGS)
+CPPFLAGS ?= -Iinclude -Isrc $(SYSTEMD_CFLAGS) $(POLKIT_CFLAGS) $(POLKIT_AGENT_CFLAGS) -DPOLKIT_AGENT_I_KNOW_API_IS_SUBJECT_TO_CHANGE
 CFLAGS_BASE := -std=c11 -Wall -Wextra -Wpedantic -Wshadow -Wconversion -Wformat=2
 RELEASE_CFLAGS := -O2
 DEBUG_CFLAGS := -O0 -g3 -fsanitize=address,undefined -fno-omit-frame-pointer
@@ -184,7 +186,7 @@ clean:
 
 $(BIN): $(APP_OBJS)
 	@mkdir -p $(dir $@)
-	$(CC) $(CFLAGS) $(LDFLAGS) $^ -o $@ $(LDLIBS) $(SYSTEMD_LIBS)
+	$(CC) $(CFLAGS) $(LDFLAGS) $^ -o $@ $(LDLIBS) $(SYSTEMD_LIBS) $(POLKIT_AGENT_LIBS)
 
 $(DAEMON_BIN): $(DAEMON_OBJS)
 	@mkdir -p $(dir $@)

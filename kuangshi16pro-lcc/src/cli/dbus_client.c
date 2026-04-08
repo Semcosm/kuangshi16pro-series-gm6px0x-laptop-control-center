@@ -1,12 +1,22 @@
 #include "cli/dbus_client.h"
 
 #include <errno.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
+#include <unistd.h>
+
+#include <polkit/polkit.h>
+#include <polkitagent/polkitagent.h>
 #include <systemd/sd-bus.h>
 
 static const char *const lcc_bus_name = "io.github.semcosm.Lcc1";
 static const char *const lcc_object_path = "/io/github/semcosm/Lcc1";
+
+typedef struct {
+  PolkitAgentListener *listener;
+  gpointer registration_handle;
+} lcc_cli_polkit_agent_t;
 
 static lcc_status_t dbus_error_to_status(const sd_bus_error *error, int r) {
   if (error != NULL && sd_bus_error_is_set(error) > 0) {
@@ -72,6 +82,81 @@ static lcc_status_t open_bus(bool use_user_bus, sd_bus **bus) {
   return LCC_OK;
 }
 
+static lcc_status_t lcc_cli_register_polkit_agent(bool use_user_bus,
+                                                  lcc_cli_polkit_agent_t *agent) {
+  PolkitSubject *subject = NULL;
+  GVariantBuilder options_builder;
+  GVariant *options = NULL;
+  GError *error = NULL;
+
+  if (agent == NULL) {
+    return LCC_ERR_INVALID_ARGUMENT;
+  }
+
+  agent->listener = NULL;
+  agent->registration_handle = NULL;
+
+  if (use_user_bus) {
+    return LCC_OK;
+  }
+  if (isatty(STDIN_FILENO) == 0) {
+    return LCC_OK;
+  }
+
+  subject = polkit_unix_session_new_for_process_sync((gint)getpid(), NULL, &error);
+  if (subject == NULL) {
+    if (error != NULL) {
+      g_error_free(error);
+    }
+    return LCC_OK;
+  }
+
+  error = NULL;
+  agent->listener = polkit_agent_text_listener_new(NULL, &error);
+  if (agent->listener == NULL) {
+    if (error != NULL) {
+      g_error_free(error);
+    }
+    g_object_unref(subject);
+    return LCC_OK;
+  }
+
+  g_variant_builder_init(&options_builder, G_VARIANT_TYPE_VARDICT);
+  g_variant_builder_add(&options_builder, "{sv}", "fallback",
+                        g_variant_new_boolean(TRUE));
+  options = g_variant_builder_end(&options_builder);
+
+  error = NULL;
+  agent->registration_handle = polkit_agent_listener_register_with_options(
+      agent->listener, POLKIT_AGENT_REGISTER_FLAGS_RUN_IN_THREAD, subject, NULL,
+      options, NULL, &error);
+  if (agent->registration_handle == NULL) {
+    if (error != NULL) {
+      g_error_free(error);
+    }
+    g_object_unref(agent->listener);
+    agent->listener = NULL;
+  }
+
+  g_object_unref(subject);
+  return LCC_OK;
+}
+
+static void lcc_cli_unregister_polkit_agent(lcc_cli_polkit_agent_t *agent) {
+  if (agent == NULL) {
+    return;
+  }
+
+  if (agent->registration_handle != NULL) {
+    polkit_agent_listener_unregister(agent->registration_handle);
+    agent->registration_handle = NULL;
+  }
+  if (agent->listener != NULL) {
+    g_object_unref(agent->listener);
+    agent->listener = NULL;
+  }
+}
+
 static lcc_status_t call_string_method(bool use_user_bus, const char *interface,
                                        const char *method, char *buffer,
                                        size_t buffer_len) {
@@ -123,6 +208,7 @@ static lcc_status_t call_string_setter(bool use_user_bus, const char *interface,
   sd_bus *bus = NULL;
   sd_bus_error error = SD_BUS_ERROR_NULL;
   sd_bus_message *reply = NULL;
+  lcc_cli_polkit_agent_t agent;
   lcc_status_t status = LCC_OK;
   int r = 0;
 
@@ -135,12 +221,19 @@ static lcc_status_t call_string_setter(bool use_user_bus, const char *interface,
     return status;
   }
 
+  status = lcc_cli_register_polkit_agent(use_user_bus, &agent);
+  if (status != LCC_OK) {
+    sd_bus_unref(bus);
+    return status;
+  }
+
   r = sd_bus_call_method(bus, lcc_bus_name, lcc_object_path, interface, method,
                          &error, &reply, "s", value);
   if (r < 0) {
     status = dbus_error_to_status(&error, r);
   }
 
+  lcc_cli_unregister_polkit_agent(&agent);
   sd_bus_message_unref(reply);
   sd_bus_error_free(&error);
   sd_bus_unref(bus);
@@ -179,6 +272,7 @@ lcc_status_t lcc_dbus_set_power_limits(bool use_user_bus,
   sd_bus *bus = NULL;
   sd_bus_error error = SD_BUS_ERROR_NULL;
   sd_bus_message *reply = NULL;
+  lcc_cli_polkit_agent_t agent;
   lcc_status_t status = LCC_OK;
   int r = 0;
   int has_pl1 = 0;
@@ -203,6 +297,12 @@ lcc_status_t lcc_dbus_set_power_limits(bool use_user_bus,
     return status;
   }
 
+  status = lcc_cli_register_polkit_agent(use_user_bus, &agent);
+  if (status != LCC_OK) {
+    sd_bus_unref(bus);
+    return status;
+  }
+
   r = sd_bus_call_method(
       bus, lcc_bus_name, lcc_object_path, "io.github.semcosm.Lcc1.Power",
       "SetPowerLimits", &error, &reply, "yyyybbbb", limits->pl1.value,
@@ -212,6 +312,7 @@ lcc_status_t lcc_dbus_set_power_limits(bool use_user_bus,
     status = dbus_error_to_status(&error, r);
   }
 
+  lcc_cli_unregister_polkit_agent(&agent);
   sd_bus_message_unref(reply);
   sd_bus_error_free(&error);
   sd_bus_unref(bus);

@@ -8,6 +8,8 @@
 
 #include <polkit/polkit.h>
 
+#include "common/lcc_log.h"
+
 static lcc_status_t map_errno_status(int saved_errno) {
   switch (saved_errno) {
     case EACCES:
@@ -84,6 +86,55 @@ static lcc_status_t read_process_start_time(pid_t pid, guint64 *start_time) {
   return LCC_ERR_IO;
 }
 
+static const char *polkit_detail_lookup(PolkitAuthorizationResult *result,
+                                        const char *key) {
+  PolkitDetails *details = NULL;
+
+  if (result == NULL || key == NULL || key[0] == '\0') {
+    return NULL;
+  }
+
+  details = polkit_authorization_result_get_details(result);
+  if (details == NULL) {
+    return NULL;
+  }
+
+  return polkit_details_lookup(details, key);
+}
+
+static void log_polkit_denial(const char *action_id, pid_t pid, uid_t uid,
+                              PolkitAuthorizationResult *result) {
+  const gboolean is_challenge =
+      polkit_authorization_result_get_is_challenge(result);
+  const gboolean dismissed = polkit_authorization_result_get_dismissed(result);
+  const char *polkit_result =
+      polkit_detail_lookup(result, "polkit.result");
+
+  if (dismissed) {
+    lcc_log_warn(
+        "polkit authorization dismissed action=%s pid=%ld uid=%ld "
+        "challenge=%s polkit_result=%s",
+        action_id, (long)pid, (long)uid, is_challenge ? "true" : "false",
+        polkit_result != NULL ? polkit_result : "unknown");
+    return;
+  }
+
+  if (is_challenge) {
+    lcc_log_warn(
+        "polkit authorization challenge not completed action=%s pid=%ld "
+        "uid=%ld polkit_result=%s hint=use an active desktop session or "
+        "pkttyagent --process %ld --fallback",
+        action_id, (long)pid, (long)uid,
+        polkit_result != NULL ? polkit_result : "unknown", (long)pid);
+    return;
+  }
+
+  lcc_log_warn("polkit authorization denied action=%s pid=%ld uid=%ld "
+               "polkit_result=%s",
+               action_id, (long)pid, (long)uid,
+               polkit_result != NULL ? polkit_result : "unknown");
+}
+
 static lcc_status_t polkit_check_authorization(sd_bus_message *message,
                                                const char *action_id) {
   sd_bus_creds *creds = NULL;
@@ -124,6 +175,10 @@ static lcc_status_t polkit_check_authorization(sd_bus_message *message,
 
   authority = polkit_authority_get_sync(NULL, &error);
   if (authority == NULL) {
+    lcc_log_error("failed to connect to polkit authority action=%s error=%s",
+                  action_id,
+                  error != NULL && error->message != NULL ? error->message
+                                                          : "unknown");
     status = LCC_ERR_IO;
     goto out;
   }
@@ -138,10 +193,16 @@ static lcc_status_t polkit_check_authorization(sd_bus_message *message,
       authority, subject, action_id, NULL,
       POLKIT_CHECK_AUTHORIZATION_FLAGS_ALLOW_USER_INTERACTION, NULL, &error);
   if (result == NULL) {
+    lcc_log_error("polkit authorization check failed action=%s pid=%ld uid=%ld "
+                  "error=%s",
+                  action_id, (long)pid, (long)uid,
+                  error != NULL && error->message != NULL ? error->message
+                                                          : "unknown");
     status = LCC_ERR_IO;
     goto out;
   }
   if (!polkit_authorization_result_get_is_authorized(result)) {
+    log_polkit_denial(action_id, pid, uid, result);
     status = LCC_ERR_PERMISSION;
     goto out;
   }
