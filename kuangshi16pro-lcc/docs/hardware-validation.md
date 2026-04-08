@@ -104,6 +104,8 @@ The runner records at least these files per step:
 Run-level artifacts also include:
 
 - `metadata.txt`
+- `contract.txt`
+- `run-summary.txt`
 - `service-override.conf`
 - `service-environment.txt`
 
@@ -118,14 +120,16 @@ Review every step against the same checklist:
 - `last_apply_backend`
 - `journalctl -u lccd.service` snippet captured for the same step window
 
-The runner also prints a condensed console summary for:
+The runner also prints a contract summary for each step, including:
 
 - `backend`
 - `backend_selected`
 - `backend_fallback_reason`
+- `execution`
 - `last_apply_stage`
 - `last_apply_error`
 - `last_apply_backend`
+- `transaction`
 
 When `state` capture succeeds, the hardware runner treats selected diagnostic
 keys as a contract: the key must exist in JSON even when its value is `null`.
@@ -135,12 +139,22 @@ Before any step assertions, the runner records `systemctl show -p Environment`
 for `lccd.service` and fails fast if the selected matrix override is not
 actually present in the service environment.
 
+The runner also loads a pinned matrix contract from:
+
+```text
+tests/hardware/expectations/<matrix>.txt
+```
+
+Each step contract asserts the installed daemon path still reports the expected
+`backend`, `backend_selected`, route table, and `last_apply_*` attribution for
+that matrix. The goal is no longer only "command ran" but "route and failure
+layer stayed explainable on real hardware."
+
 ## Result Interpretation
 
 Successful validation means:
 
-- the product command returns success, or the matrix explicitly allows the
-  failure mode
+- the product command result matches the pinned matrix contract for that step
 - `state.json` and `journal.log` tell the same story about route and outcome
 - `backend_selected`, `execution`, and `last_apply_backend` remain consistent
 

@@ -16,6 +16,8 @@ skip_fan="${LCC_SKIP_FAN:-0}"
 skip_power="${LCC_SKIP_POWER:-0}"
 artifacts_root="$project_dir/artifacts/hardware-smoke"
 run_dir="$artifacts_root/$(lcc_hw_now_stamp)"
+run_summary_file="$run_dir/run-summary.txt"
+expectation_file=""
 override_dir="/run/systemd/system/${service_name}.d"
 override_file="${override_dir}/50-hardware-smoke.conf"
 override_tmp="$(mktemp /tmp/lcc-hardware-smoke.XXXXXX)"
@@ -56,43 +58,6 @@ validate_service_environment() {
       if grep -q 'LCC_AMW0_DRY_RUN=' "$environment_file"; then
         return 1
       fi
-      ;;
-  esac
-}
-
-validate_initial_state() {
-  local state_file="$1"
-
-  case "$matrix" in
-    standard-only)
-      grep -q '"backend":"standard"' "$state_file"
-      grep -q '"apply_mode":false' "$state_file"
-      grep -q '"apply_power_limits":false' "$state_file"
-      grep -q '"apply_fan_table":false' "$state_file"
-      ;;
-    amw0-forced)
-      grep -q '"backend":"amw0"' "$state_file"
-      grep -q '"backend_selected":"amw0"' "$state_file"
-      ;;
-    mixed|dry-run)
-      grep -q '"backend":"standard"' "$state_file"
-      grep -q '"backend_selected":"standard"' "$state_file"
-      ;;
-  esac
-}
-
-step_allows_failure() {
-  local step_name="$1"
-
-  case "$matrix:$step_name" in
-    standard-only:03-mode-office|standard-only:05-mode-turbo|standard-only:07-power-set|standard-only:09-fan-apply)
-      return 0
-      ;;
-    dry-run:03-mode-office|dry-run:05-mode-turbo|dry-run:07-power-set|dry-run:09-fan-apply)
-      return 0
-      ;;
-    *)
-      return 1
       ;;
   esac
 }
@@ -153,18 +118,12 @@ run_step() {
     "$step_dir/journal.log"
   lcc_hw_write_summary "$step_dir/state.json" "$step_dir/summary.txt" \
     "$command_rc" "$state_rc"
+  lcc_hw_append_run_summary "$run_summary_file" "$step_name" \
+    "$step_dir/summary.txt"
   lcc_hw_print_summary "$step_dir/summary.txt"
 
-  if [[ "$state_rc" -ne 0 ]]; then
-    run_failed=1
-    return 1
-  fi
-  if ! lcc_hw_require_state_contract "$step_dir/state.json"; then
-    run_failed=1
-    return 1
-  fi
-
-  if [[ "$command_rc" -ne 0 ]] && ! step_allows_failure "$step_name"; then
+  if ! lcc_hw_validate_step_contract "$step_name" "$step_dir/summary.txt" \
+      "$expectation_file"; then
     run_failed=1
     return 1
   fi
@@ -188,6 +147,8 @@ lcc_hw_require_command journalctl
 lcc_hw_require_command grep
 lcc_hw_require_command sed
 lcc_hw_require_file "$fixture_fan"
+expectation_file="$(lcc_hw_expectation_file "$matrix")"
+lcc_hw_require_file "$expectation_file"
 
 mkdir -p "$artifacts_root"
 mkdir -p "$run_dir"
@@ -217,11 +178,13 @@ service=$service_name
 user=$(id -un)
 run_dir=$run_dir
 fixture_fan=$fixture_fan
+expectation_file=$expectation_file
 journal_lines=$journal_lines
 skip_power=$skip_power
 skip_fan=$skip_fan
 EOF
 cp "$override_tmp" "$run_dir/service-override.conf"
+cp "$expectation_file" "$run_dir/contract.txt"
 sudo systemctl show -p Environment "$service_name" \
   | tee "$run_dir/service-environment.txt" >/dev/null
 
@@ -235,11 +198,6 @@ if ! validate_service_environment "$run_dir/service-environment.txt"; then
 fi
 
 run_step 01-state-initial "$lccctl_bin" state --system-bus
-if ! validate_initial_state "$run_dir/01-state-initial/state.json"; then
-  printf 'initial state validation failed for %s\n' "$matrix" >&2
-  run_failed=1
-  exit 1
-fi
 run_step 02-capabilities "$lccctl_bin" capabilities --system-bus
 run_step 03-mode-office "$lccctl_bin" mode set office --system-bus
 run_step 04-state-after-office "$lccctl_bin" state --system-bus

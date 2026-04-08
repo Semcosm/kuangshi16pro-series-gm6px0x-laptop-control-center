@@ -1,0 +1,91 @@
+# standard-only keeps reads on standard Linux ABI and leaves unsupported write
+# paths at capability-gate when no standard route is available.
+
+01-state-initial.command_exit_code=0
+01-state-initial.state_capture=ok
+01-state-initial.state_contract=ok
+01-state-initial.backend=standard
+01-state-initial.backend_selected=standard
+01-state-initial.execution_read_state=standard
+01-state-initial.execution_apply_profile=standard|none
+01-state-initial.execution_apply_mode=standard|none
+01-state-initial.execution_apply_power_limits=none
+01-state-initial.execution_apply_fan_table=none
+
+02-capabilities.command_exit_code=0
+02-capabilities.state_capture=ok
+02-capabilities.state_contract=ok
+02-capabilities.backend=standard
+02-capabilities.backend_selected=standard
+
+03-mode-office.command_exit_code=0|1
+03-mode-office.state_capture=ok
+03-mode-office.state_contract=ok
+03-mode-office.backend=standard
+03-mode-office.backend_selected=standard
+03-mode-office.last_apply_stage=write-platform-profile|capability-gate
+03-mode-office.last_apply_backend=standard|none
+03-mode-office.last_apply_error=none|not supported
+
+04-state-after-office.command_exit_code=0
+04-state-after-office.state_capture=ok
+04-state-after-office.state_contract=ok
+04-state-after-office.backend=standard
+04-state-after-office.backend_selected=standard
+04-state-after-office.last_apply_stage=write-platform-profile|capability-gate
+04-state-after-office.last_apply_backend=standard|none
+04-state-after-office.last_apply_error=none|not supported
+
+05-mode-turbo.command_exit_code=0|1
+05-mode-turbo.state_capture=ok
+05-mode-turbo.state_contract=ok
+05-mode-turbo.backend=standard
+05-mode-turbo.backend_selected=standard
+05-mode-turbo.last_apply_stage=write-platform-profile|capability-gate
+05-mode-turbo.last_apply_backend=standard|none
+05-mode-turbo.last_apply_error=none|not supported
+
+06-state-after-turbo.command_exit_code=0
+06-state-after-turbo.state_capture=ok
+06-state-after-turbo.state_contract=ok
+06-state-after-turbo.backend=standard
+06-state-after-turbo.backend_selected=standard
+06-state-after-turbo.last_apply_stage=write-platform-profile|capability-gate
+06-state-after-turbo.last_apply_backend=standard|none
+06-state-after-turbo.last_apply_error=none|not supported
+
+07-power-set.command_exit_code=1
+07-power-set.state_capture=ok
+07-power-set.state_contract=ok
+07-power-set.backend=standard
+07-power-set.backend_selected=standard
+07-power-set.last_apply_stage=capability-gate
+07-power-set.last_apply_backend=none
+07-power-set.last_apply_error=not supported
+
+08-state-after-power.command_exit_code=0
+08-state-after-power.state_capture=ok
+08-state-after-power.state_contract=ok
+08-state-after-power.backend=standard
+08-state-after-power.backend_selected=standard
+08-state-after-power.last_apply_stage=capability-gate
+08-state-after-power.last_apply_backend=none
+08-state-after-power.last_apply_error=not supported
+
+09-fan-apply.command_exit_code=1
+09-fan-apply.state_capture=ok
+09-fan-apply.state_contract=ok
+09-fan-apply.backend=standard
+09-fan-apply.backend_selected=standard
+09-fan-apply.last_apply_stage=capability-gate
+09-fan-apply.last_apply_backend=none
+09-fan-apply.last_apply_error=not supported
+
+10-state-after-fan.command_exit_code=0
+10-state-after-fan.state_capture=ok
+10-state-after-fan.state_contract=ok
+10-state-after-fan.backend=standard
+10-state-after-fan.backend_selected=standard
+10-state-after-fan.last_apply_stage=capability-gate
+10-state-after-fan.last_apply_backend=none
+10-state-after-fan.last_apply_error=not supported

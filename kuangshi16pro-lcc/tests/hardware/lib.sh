@@ -50,6 +50,14 @@ lcc_hw_require_file() {
   fi
 }
 
+lcc_hw_expectation_file() {
+  local matrix="$1"
+  local project_dir
+
+  project_dir="$(lcc_hw_project_dir)"
+  printf '%s/tests/hardware/expectations/%s.txt\n' "$project_dir" "$matrix"
+}
+
 lcc_hw_json_has_key() {
   local file="$1"
   local key="$2"
@@ -59,6 +67,35 @@ lcc_hw_json_has_key() {
   fi
 
   grep -q "\"$key\":" "$file"
+}
+
+lcc_hw_json_get_object_key() {
+  local file="$1"
+  local object="$2"
+  local key="$3"
+  local match=""
+  local value=""
+
+  if [[ ! -f "$file" ]]; then
+    printf 'none\n'
+    return 0
+  fi
+
+  match="$(grep -o "\"$object\":{[^}]*\"$key\":\\(\"[^\"]*\"\\|null\\|true\\|false\\|[0-9][0-9]*\\)" \
+    "$file" | head -n 1 || true)"
+  if [[ -z "$match" ]]; then
+    printf 'missing\n'
+    return 0
+  fi
+
+  value="${match##*:}"
+  value="${value#\"}"
+  value="${value%\"}"
+  if [[ -z "$value" || "$value" == "null" ]]; then
+    value="none"
+  fi
+
+  printf '%s\n' "$value"
 }
 
 lcc_hw_collect_missing_state_keys() {
@@ -129,6 +166,98 @@ lcc_hw_json_get() {
   printf '%s\n' "$value"
 }
 
+lcc_hw_summary_get() {
+  local summary_file="$1"
+  local key="$2"
+  local match=""
+
+  if [[ ! -f "$summary_file" ]]; then
+    printf 'missing\n'
+    return 0
+  fi
+
+  match="$(grep "^$key=" "$summary_file" | head -n 1 || true)"
+  if [[ -z "$match" ]]; then
+    printf 'missing\n'
+    return 0
+  fi
+
+  printf '%s\n' "${match#*=}"
+}
+
+lcc_hw_value_matches() {
+  local actual="$1"
+  local expected="$2"
+  local candidate=""
+  local -a expected_values=()
+
+  IFS='|' read -r -a expected_values <<<"$expected"
+  for candidate in "${expected_values[@]}"; do
+    if [[ "$actual" == "$candidate" ]]; then
+      return 0
+    fi
+  done
+
+  return 1
+}
+
+lcc_hw_validate_step_contract() {
+  local step_name="$1"
+  local summary_file="$2"
+  local expectation_file="$3"
+  local failed=0
+  local line=""
+  local field=""
+  local expected=""
+  local actual=""
+  local matched=0
+
+  if [[ ! -f "$expectation_file" ]]; then
+    printf 'expectation file not found: %s\n' "$expectation_file" >&2
+    return 1
+  fi
+
+  while IFS= read -r line || [[ -n "$line" ]]; do
+    if [[ -z "$line" || "$line" == \#* ]]; then
+      continue
+    fi
+    if [[ "$line" != "$step_name".* ]]; then
+      continue
+    fi
+
+    matched=1
+    field="${line#${step_name}.}"
+    field="${field%%=*}"
+    expected="${line#*=}"
+    actual="$(lcc_hw_summary_get "$summary_file" "$field")"
+    if ! lcc_hw_value_matches "$actual" "$expected"; then
+      printf 'step contract mismatch step=%s field=%s expected=%s actual=%s\n' \
+        "$step_name" "$field" "$expected" "$actual" >&2
+      failed=1
+    fi
+  done <"$expectation_file"
+
+  if [[ "$matched" -eq 0 ]]; then
+    printf 'missing step contract for %s in %s\n' "$step_name" \
+      "$expectation_file" >&2
+    return 1
+  fi
+
+  return "$failed"
+}
+
+lcc_hw_append_run_summary() {
+  local run_summary_file="$1"
+  local step_name="$2"
+  local summary_file="$3"
+
+  {
+    printf '[%s]\n' "$step_name"
+    cat "$summary_file"
+    printf '\n'
+  } >>"$run_summary_file"
+}
+
 lcc_hw_write_summary() {
   local state_file="$1"
   local summary_file="$2"
@@ -155,12 +284,32 @@ lcc_hw_write_summary() {
       "$(lcc_hw_json_get "$state_file" "backend_selected")"
     printf 'backend_fallback_reason=%s\n' \
       "$(lcc_hw_json_get "$state_file" "backend_fallback_reason")"
+    printf 'execution_read_state=%s\n' \
+      "$(lcc_hw_json_get_object_key "$state_file" "execution" "read_state")"
+    printf 'execution_apply_profile=%s\n' \
+      "$(lcc_hw_json_get_object_key "$state_file" "execution" "apply_profile")"
+    printf 'execution_apply_mode=%s\n' \
+      "$(lcc_hw_json_get_object_key "$state_file" "execution" "apply_mode")"
+    printf 'execution_apply_power_limits=%s\n' \
+      "$(lcc_hw_json_get_object_key "$state_file" "execution" "apply_power_limits")"
+    printf 'execution_apply_fan_table=%s\n' \
+      "$(lcc_hw_json_get_object_key "$state_file" "execution" "apply_fan_table")"
+    printf 'hardware_write=%s\n' \
+      "$(lcc_hw_json_get "$state_file" "hardware_write")"
     printf 'last_apply_stage=%s\n' \
       "$(lcc_hw_json_get "$state_file" "last_apply_stage")"
     printf 'last_apply_error=%s\n' \
       "$(lcc_hw_json_get "$state_file" "last_apply_error")"
     printf 'last_apply_backend=%s\n' \
       "$(lcc_hw_json_get "$state_file" "last_apply_backend")"
+    printf 'transaction_state=%s\n' \
+      "$(lcc_hw_json_get_object_key "$state_file" "transaction" "state")"
+    printf 'transaction_operation=%s\n' \
+      "$(lcc_hw_json_get_object_key "$state_file" "transaction" "operation")"
+    printf 'transaction_stage=%s\n' \
+      "$(lcc_hw_json_get_object_key "$state_file" "transaction" "stage")"
+    printf 'transaction_last_error=%s\n' \
+      "$(lcc_hw_json_get_object_key "$state_file" "transaction" "last_error")"
   } >"$summary_file"
 }
 
