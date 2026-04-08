@@ -1,11 +1,11 @@
 # Kuangshi16Pro LCC
 
-This directory contains the Linux-native implementation scaffold for the laptop
-control center.
+This directory contains the current Linux-native daemon, CLI, and deployment
+assets for the laptop control center.
 
 Layout:
 
-- `src/daemon/`: future `lccd` system service and transaction coordinator
+- `src/daemon/`: current `lccd` service and transaction coordinator
 - `src/dbus/`: D-Bus server and introspection XML
 - `src/core/`: backend-agnostic profile, fan, power, state, and capability logic
 - `src/backends/`: standard Linux ABI backends first, AMW0 fallback second
@@ -14,12 +14,12 @@ Layout:
 - `docs/`: architecture notes and reverse-guided implementation docs
 - `data/`: imported OEM presets, fan tables, and model capability maps
 - `tests/fixtures/`: current INI fixtures used by unit tests
-- `systemd/` and `dbus/`: service and bus policy skeletons
+- `systemd/` and `dbus/`: installable systemd, D-Bus, and Polkit assets
 
 Current focus:
 
-- keep the current CLI and tests building while the tree moves toward a
-  daemon + D-Bus architecture
+- keep the stable D-Bus v1 surface, deployment contract, and route attribution
+  pinned while install/uninstall work is productized
 - keep standard Linux ABI support as the preferred backend direction
 - isolate `AMW0` / `INOU` as a vendor-specific fallback path
 
@@ -66,11 +66,14 @@ Current phase:
   and decode helpers
 - `src/cli/` has been split into command-specific files and now prefers D-Bus
 - system-bus mutating methods are now authorized through polkit, while reads remain unprivileged
-- `src/daemon/` and `src/dbus/` now build into a minimal `lccd` that exposes
+- `src/daemon/` and `src/dbus/` now build into `lccd`, which exposes the stable
+  v1 service surface:
   `GetCapabilities`, `GetState`, `SetMode`, `SetProfile`, `ApplyFanTable`,
   and `SetPowerLimits` over D-Bus
-- `data/`, `systemd/`, and `dbus/` now carry the first capability map and bus
-  integration skeletons
+- `systemd/` and `dbus/` now carry installable service, activation, system-bus,
+  and Polkit policy assets for the deployed daemon path
+- `tests/hardware/run_real_smoke.sh` validates the installed system-bus `lccd`
+  with route and failure-layer evidence capture
 
 Development helpers:
 

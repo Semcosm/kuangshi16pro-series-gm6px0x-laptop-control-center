@@ -1,23 +1,18 @@
 # Linux Control Center Roadmap
 
-This roadmap keeps the Linux implementation aligned with the `GCUService` reverse engineering work.
+This roadmap keeps the Linux implementation aligned with the `GCUService`
+reverse engineering work while tracking the current Linux product path.
 
-## Current Status Check
+## Current Baseline
 
-- PR1 completed
-- PR2 completed
-- PR3 completed, with the D-Bus v1 stable surface intentionally limited to
-  `Manager`, `Fan`, and `Power`; there is no standalone `Thermal` XML in the
-  stable API
-- PR4 completed
-- PR5 completed
-- PR6 completed
-- PR7 completed
-- PR8 completed, with product-facing CLI commands running as pure D-Bus
-  clients while developer and admin debug commands still keep a direct path
-- PR9 completed in repository code and workflow definitions; GitHub-side branch
-  protection and required-check configuration still need final manual
-  confirmation in the repository settings
+- `lccd` is the privileged daemon and the system bus is the product control surface
+- stable D-Bus v1 is intentionally limited to `Manager`, `Fan`, and `Power`
+- product-facing `lccctl` commands are pure D-Bus clients; direct AMW0 access
+  remains a developer path only
+- systemd, D-Bus activation, system-bus config, and Polkit policy assets are
+  already committed in-tree
+- hardware validation already targets the installed system-bus daemon rather
+  than ad hoc direct-write probes
 
 ## Main Goal
 
@@ -31,6 +26,15 @@ Reproduce the `GCUService.exe` service layer on Linux:
 - status reads
 
 UI comes later.
+
+## Active Delivery Line
+
+1. `PR13A`
+   finishing/core: assert contracts, pin route attribution, and converge the
+   deployment surface across docs, source, and checked-in system assets
+2. `PR13B`
+   build/install: productize install, uninstall, staging, and install-smoke for
+   the already-existing deployment assets
 
 ## Reverse Priorities
 
@@ -65,25 +69,3 @@ Map this machine to the vendor fan-table family and confirm:
 - default office/gaming/turbo tables
 - custom fan-curve persistence format
 - dGPU direct connection behavior and restart requirements
-
-## Linux Build Order
-
-1. `backends/amw0`
-   Raw packet packing and send/read helpers.
-2. `core/profile` + `core/fan` + `core/power`
-   `MainOption`, `ModeProfile`, fan table, and power-limit orchestration.
-3. `state-reader`
-   temps, fan RPM, mode, and support/status bits.
-4. `ui`
-   minimal panel after the backend works.
-
-## Immediate Next Steps
-
-1. keep decompiling `GCUService.exe`
-2. export method-level call notes for the hot paths above
-3. translate the Windows model into Linux-side config structs
-4. implement a minimal Linux command set:
-   - set mode
-   - write fan table
-   - set `PL1/PL2/PL4`
-   - read status

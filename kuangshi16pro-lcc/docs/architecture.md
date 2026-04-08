@@ -1,6 +1,6 @@
 # Architecture
 
-`kuangshi16pro-lcc` is moving toward a Linux-native service model rather than a
+`kuangshi16pro-lcc` is built around a Linux-native service model rather than a
 Windows-style UI + broker + bridge-process stack.
 
 Current direction:
@@ -29,7 +29,7 @@ Code split in phase 1:
 - `src/cli/`
   current operator-facing client
 - `src/daemon/` and `src/dbus/`
-  scaffold for the future service boundary
+  current service boundary, authorization entrypoints, and stable D-Bus v1 implementation
 
 Backend execution contract:
 
@@ -50,3 +50,6 @@ daemon and D-Bus server are wired up.
 Runtime diagnostic field semantics are defined separately in
 `docs/observability.md` so `GetState` stays a stable operational contract while
 backend routing keeps evolving internally.
+
+The installed service units, bus-policy assets, action ids, and path
+assumptions are defined in `docs/deployment-surface.md`.

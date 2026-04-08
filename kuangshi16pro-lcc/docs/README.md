@@ -6,9 +6,11 @@ control-center architecture.
 Start here:
 
 - `architecture.md`
-  system daemon, D-Bus, Polkit, backend split, and first-phase boundaries
+  current daemon model, D-Bus boundary, Polkit, backend split, and execution contract
 - `dbus-api.md`
   public bus name, object path, interface split, and request/effective-state model
+- `deployment-surface.md`
+  installed assets, naming contract, authorization contract, and path assumptions
 - `profiles.md`
   mode/profile/fan/power objects mirrored from the Windows reverse work
 - `backend-amw0.md`
@@ -26,7 +28,7 @@ Start here:
 - `source-map.md`
   which repository files are still worth reading, and what each one is for
 - `roadmap.md`
-  current build order, reverse-engineering priorities, and PR status check
+  current implementation baseline, next productization steps, and reverse priorities
 - `ci.md`
   GitHub Actions checks and the protected-branch required-check list
 

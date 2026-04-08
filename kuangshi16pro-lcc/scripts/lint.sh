@@ -5,6 +5,7 @@ repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 project_dir="$repo_root/kuangshi16pro-lcc"
 
 shell_files=(
+  "$project_dir/scripts/check_deployment_surface.sh"
   "$project_dir/scripts/dev-run.sh"
   "$project_dir/scripts/lint.sh"
   "$project_dir/scripts/smoke-test.sh"
@@ -20,6 +21,8 @@ done
 if command -v shellcheck >/dev/null 2>&1; then
   shellcheck -x "${shell_files[@]}"
 fi
+
+bash "$project_dir/scripts/check_deployment_surface.sh"
 
 if git -C "$repo_root" grep -nI '[[:blank:]]$' -- \
     .github/workflows \

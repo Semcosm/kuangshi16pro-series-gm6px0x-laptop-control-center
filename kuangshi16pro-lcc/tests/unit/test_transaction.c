@@ -253,10 +253,68 @@ static void test_transaction_backend_route_failure_records_state(void) {
   assert(strcmp(manager.state_cache.effective.profile, "balanced") == 0);
 }
 
+static void test_transaction_converged_route_attribution_records_executor(void) {
+  char root[256];
+  lcc_backend_t standard_handle;
+  lcc_backend_t amw0_handle;
+  lcc_backend_t converged_handle;
+  lcc_standard_backend_t standard_backend;
+  lcc_amw0_backend_t amw0_backend;
+  lcc_converged_backend_t converged_backend;
+  lcc_backend_capabilities_t standard_capabilities;
+  lcc_backend_capabilities_t amw0_capabilities;
+  lcc_backend_result_t result;
+  lcc_manager_t manager;
+  lcc_transaction_request_t request;
+  lcc_power_limits_t limits;
+
+  init_fake_sysfs(root, sizeof(root));
+  assert(lcc_standard_backend_init_at_root(&standard_backend, &standard_handle,
+                                           root) == LCC_OK);
+  assert(lcc_backend_probe(&standard_handle, &standard_capabilities, &result) ==
+         LCC_OK);
+  assert(lcc_amw0_backend_init(&amw0_backend, &amw0_handle, "/proc/acpi/call",
+                               NULL, true) == LCC_OK);
+  assert(lcc_backend_probe(&amw0_handle, &amw0_capabilities, &result) ==
+         LCC_OK);
+  assert(lcc_converged_backend_init(
+             &converged_backend, &converged_handle, &standard_handle, LCC_OK,
+             &standard_capabilities, &amw0_handle, LCC_OK,
+             &amw0_capabilities) == LCC_OK);
+  assert(lcc_manager_init(&manager, &converged_handle, NULL) == LCC_OK);
+
+  memset(&limits, 0, sizeof(limits));
+  limits.pl1.present = true;
+  limits.pl1.value = 70u;
+  limits.pl2.present = true;
+  limits.pl2.value = 120u;
+
+  memset(&request, 0, sizeof(request));
+  request.kind = LCC_TRANSACTION_POWER_LIMITS;
+  request.input.power_limits = &limits;
+
+  assert(lcc_transaction_execute(&manager, &request) == LCC_OK);
+  assert(manager.state_cache.transaction.state == LCC_TRANSACTION_STATE_IDLE);
+  assert(strcmp(manager.state_cache.backend_name, "standard") == 0);
+  assert(strcmp(manager.state_cache.backend_selected, "standard") == 0);
+  assert(strcmp(manager.state_cache.execution.read_state, "standard") == 0);
+  assert(strcmp(manager.state_cache.execution.apply_power_limits, "amw0") == 0);
+  assert(strcmp(manager.state_cache.last_apply.stage, "write-pl2") == 0);
+  assert(strcmp(manager.state_cache.last_apply.backend, "amw0") == 0);
+  assert(manager.state_cache.last_apply.error == LCC_OK);
+  assert(manager.state_cache.last_apply.has_target);
+  assert(manager.state_cache.effective.has_power_limits);
+  assert(manager.state_cache.effective.power_limits.pl1.present);
+  assert(manager.state_cache.effective.power_limits.pl1.value == 70u);
+  assert(manager.state_cache.effective.power_limits.pl2.present);
+  assert(manager.state_cache.effective.power_limits.pl2.value == 120u);
+}
+
 void lcc_run_transaction_tests(void) {
   test_transaction_happy_path();
   test_transaction_failure_path();
   test_transaction_preflight_failure_records_state();
   test_transaction_capability_gate_records_state();
   test_transaction_backend_route_failure_records_state();
+  test_transaction_converged_route_attribution_records_executor();
 }
