@@ -42,6 +42,46 @@ lcc_status_t lcc_backend_state_set_metadata(
     lcc_state_snapshot_t *state, const char *backend_name,
     const char *backend_selected, const char *fallback_reason,
     const lcc_execution_snapshot_t *execution);
+void lcc_backend_effective_meta_clear(
+    lcc_effective_state_metadata_t *effective_meta);
+lcc_status_t lcc_backend_effective_component_set(
+    lcc_state_component_attribution_t *component, const char *source,
+    const char *freshness);
+lcc_status_t lcc_backend_effective_component_merge(
+    lcc_state_component_attribution_t *component, const char *source,
+    const char *freshness);
+void lcc_backend_effective_meta_finalize(
+    lcc_effective_state_metadata_t *effective_meta);
+void lcc_backend_state_finalize_effective_meta(lcc_state_snapshot_t *state);
+void lcc_backend_state_mark_effective_cached(lcc_state_snapshot_t *state);
+
+typedef enum {
+  LCC_POWER_FIELD_PL1 = 0,
+  LCC_POWER_FIELD_PL2,
+  LCC_POWER_FIELD_PL4,
+  LCC_POWER_FIELD_TCC_OFFSET,
+} lcc_power_field_kind_t;
+
+void lcc_backend_effective_power_clear(
+    lcc_effective_state_metadata_t *effective_meta);
+lcc_state_component_attribution_t *lcc_backend_effective_power_field(
+    lcc_effective_state_metadata_t *effective_meta,
+    lcc_power_field_kind_t field_kind);
+const lcc_state_component_attribution_t *lcc_backend_effective_power_field_const(
+    const lcc_effective_state_metadata_t *effective_meta,
+    lcc_power_field_kind_t field_kind);
+lcc_status_t lcc_backend_effective_power_field_set(
+    lcc_effective_state_metadata_t *effective_meta,
+    lcc_power_field_kind_t field_kind, const char *source,
+    const char *freshness);
+lcc_status_t lcc_backend_effective_power_field_merge(
+    lcc_effective_state_metadata_t *effective_meta,
+    lcc_power_field_kind_t field_kind, const char *source,
+    const char *freshness);
+void lcc_backend_effective_power_set_from_limits(
+    lcc_effective_state_metadata_t *effective_meta,
+    const lcc_power_limits_t *limits, const char *source,
+    const char *freshness);
 
 typedef struct {
   char root[256];

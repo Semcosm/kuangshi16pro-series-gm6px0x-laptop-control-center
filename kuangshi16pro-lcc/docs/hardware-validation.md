@@ -115,9 +115,11 @@ Review every step against the same checklist:
 - D-Bus client exit code and stdout/stderr
 - `lccctl state` snapshot after the step
 - `backend_selected`
+- `effective_meta`
 - `last_apply_stage`
 - `last_apply_error`
 - `last_apply_backend`
+- `last_apply_hardware_write`
 - `journalctl -u lccd.service` snippet captured for the same step window
 
 The runner also prints a contract summary for each step, including:
@@ -125,15 +127,22 @@ The runner also prints a contract summary for each step, including:
 - `backend`
 - `backend_selected`
 - `backend_fallback_reason`
+- `effective_meta`
 - `execution`
 - `last_apply_stage`
 - `last_apply_error`
 - `last_apply_backend`
+- `last_apply_hardware_write`
 - `transaction`
 
 When `state` capture succeeds, the hardware runner treats selected diagnostic
 keys as a contract: the key must exist in JSON even when its value is `null`.
 Missing keys are treated as a regression; `null` values remain valid state.
+That includes attribution fields under `effective_meta`: if a component cannot
+be read or explained, the contract expects explicit `null`, not a guessed
+backend name. For power limits, this rule applies both to the parent
+`effective_meta.components.power` summary and to each field under
+`effective_meta.components.power.fields`.
 
 Before any step assertions, the runner records `systemctl show -p Environment`
 for `lccd.service` and fails fast if the selected matrix override is not
@@ -169,6 +178,38 @@ Do not re-run with `developer raw wmbc` to explain a product failure. The first
 artifact set from the daemon path should already be enough to identify whether
 the failure is input validation, capability gating, route selection, or the
 backend write itself.
+
+## Powercap Audit
+
+When `effective.power` looks suspicious, capture raw Linux `powercap` state
+before changing backend code again.
+
+Use:
+
+```bash
+kuangshi16pro-lcc/scripts/powercap-audit.sh snapshot
+kuangshi16pro-lcc/scripts/powercap-audit.sh around -- lccctl power set --pl1 70 --pl2 120
+```
+
+The script writes a timestamped directory under `/tmp` by default. It captures:
+
+- raw `powercap` zones and `constraint_*` files
+- `lccctl state`
+- `lccctl capabilities`
+- `systemctl show lccd.service`
+- in `around` mode, the command stdout/stderr/exit code plus `powercap.diff`
+  and `state.diff`
+
+Interpretation rules:
+
+- if `powercap.txt` already shows the same `constraint_0/1_power_limit_uw`
+  values as `lccctl state`, the daemon is mirroring Linux `powercap` correctly
+- if `lccctl power set ...` changes daemon state but not `powercap.diff`, then
+  the write path and Linux `powercap` are reporting different semantics and
+  should not be conflated
+- if only one field, such as `tcc_offset`, changes in `state.diff`, prefer the
+  field-level attribution in `effective_meta.components.power.fields` over the
+  parent `power.source`
 
 ## Runner Usage
 

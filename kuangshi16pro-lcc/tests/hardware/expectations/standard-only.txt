@@ -1,5 +1,5 @@
-# standard-only keeps reads on standard Linux ABI and leaves unsupported write
-# paths at capability-gate when no standard route is available.
+# standard-only keeps both reads and PL1/PL2 writes on standard Linux ABI and
+# still rejects unsupported fan-table writes at capability-gate.
 
 01-state-initial.command_exit_code=0
 01-state-initial.state_capture=ok
@@ -9,7 +9,7 @@
 01-state-initial.execution_read_state=standard
 01-state-initial.execution_apply_profile=standard|none
 01-state-initial.execution_apply_mode=standard|none
-01-state-initial.execution_apply_power_limits=none
+01-state-initial.execution_apply_power_limits=standard
 01-state-initial.execution_apply_fan_table=none
 
 02-capabilities.command_exit_code=0
@@ -54,23 +54,23 @@
 06-state-after-turbo.last_apply_backend=standard|none
 06-state-after-turbo.last_apply_error=none|not supported
 
-07-power-set.command_exit_code=1
+07-power-set.command_exit_code=0
 07-power-set.state_capture=ok
 07-power-set.state_contract=ok
 07-power-set.backend=standard
 07-power-set.backend_selected=standard
-07-power-set.last_apply_stage=capability-gate
-07-power-set.last_apply_backend=none
-07-power-set.last_apply_error=not supported
+07-power-set.last_apply_stage=verify-powercap
+07-power-set.last_apply_backend=standard
+07-power-set.last_apply_error=none
 
 08-state-after-power.command_exit_code=0
 08-state-after-power.state_capture=ok
 08-state-after-power.state_contract=ok
 08-state-after-power.backend=standard
 08-state-after-power.backend_selected=standard
-08-state-after-power.last_apply_stage=capability-gate
-08-state-after-power.last_apply_backend=none
-08-state-after-power.last_apply_error=not supported
+08-state-after-power.last_apply_stage=verify-powercap
+08-state-after-power.last_apply_backend=standard
+08-state-after-power.last_apply_error=none
 
 09-fan-apply.command_exit_code=1
 09-fan-apply.state_capture=ok

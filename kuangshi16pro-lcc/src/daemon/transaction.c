@@ -216,6 +216,8 @@ static void last_apply_begin(lcc_manager_t *manager) {
   manager->state_cache.last_apply.stage[0] = '\0';
   manager->state_cache.last_apply.backend[0] = '\0';
   manager->state_cache.last_apply.has_target = false;
+  manager->state_cache.last_apply.has_hardware_write = false;
+  manager->state_cache.last_apply.hardware_write = false;
   memset(&manager->state_cache.last_apply.target, 0,
          sizeof(manager->state_cache.last_apply.target));
   manager->state_cache.last_apply.error = LCC_OK;
@@ -264,6 +266,16 @@ static void last_apply_set_target(lcc_manager_t *manager,
     memset(&manager->state_cache.last_apply.target, 0,
            sizeof(manager->state_cache.last_apply.target));
   }
+}
+
+static void last_apply_set_hardware_write(lcc_manager_t *manager,
+                                          bool hardware_write) {
+  if (manager == NULL) {
+    return;
+  }
+
+  manager->state_cache.last_apply.has_hardware_write = true;
+  manager->state_cache.last_apply.hardware_write = hardware_write;
 }
 
 static void transaction_update_stage(lcc_manager_t *manager,
@@ -621,6 +633,7 @@ lcc_status_t lcc_transaction_execute(lcc_manager_t *manager,
 
   transaction_update_stage(manager, LCC_TX_STAGE_BACKEND_ROUTE);
   status = transaction_apply(manager, request, resolved_mode, &result);
+  last_apply_set_hardware_write(manager, result.hardware_write);
   if (result.executor_backend[0] != '\0') {
     last_apply_update_backend(manager, result.executor_backend);
   }

@@ -17,8 +17,10 @@ Start here:
   proven AMW0 / WMBC / WKBC / SCMD facts that matter for the vendor backend
 - `observability.md`
   stable `GetState` diagnostic semantics, stage vocabulary, and executor rules
+- `state-contract.md`
+  stable `GetState` JSON contract, target-object semantics, and nullability rules
 - `hardware-validation.md`
-  real-machine matrix, smoke runner usage, and artifact review contract
+  real-machine matrix, smoke runner usage, powercap audit flow, and artifact review contract
 - `gpu-mux.md`
   experimental MUX/direct-connect notes and why this stays off the main path
 - `dev-notes/reverse-findings.md`

@@ -65,6 +65,9 @@ static void init_fake_sysfs(char *root, size_t root_len) {
   make_dir(path);
   (void)snprintf(path, sizeof(path), "%s/class/powercap/intel-rapl:0", root);
   make_dir(path);
+  (void)snprintf(path, sizeof(path), "%s/class/powercap/intel-rapl-mmio:0",
+                 root);
+  make_dir(path);
   (void)snprintf(path, sizeof(path), "%s/firmware", root);
   make_dir(path);
   (void)snprintf(path, sizeof(path), "%s/firmware/acpi", root);
@@ -89,6 +92,38 @@ static void init_fake_sysfs(char *root, size_t root_len) {
                  "%s/class/powercap/intel-rapl:0/constraint_1_power_limit_uw",
                  root);
   write_text_file(path, "90000000\n");
+  (void)snprintf(path, sizeof(path), "%s/class/powercap/intel-rapl:0/name",
+                 root);
+  write_text_file(path, "package-0\n");
+  (void)snprintf(path, sizeof(path), "%s/class/powercap/intel-rapl:0/enabled",
+                 root);
+  write_text_file(path, "1\n");
+  (void)snprintf(path, sizeof(path), "%s/class/powercap/intel-rapl:0/constraint_0_name",
+                 root);
+  write_text_file(path, "long_term\n");
+  (void)snprintf(path, sizeof(path), "%s/class/powercap/intel-rapl:0/constraint_1_name",
+                 root);
+  write_text_file(path, "short_term\n");
+  (void)snprintf(path, sizeof(path),
+                 "%s/class/powercap/intel-rapl-mmio:0/constraint_0_power_limit_uw",
+                 root);
+  write_text_file(path, "140000000\n");
+  (void)snprintf(path, sizeof(path),
+                 "%s/class/powercap/intel-rapl-mmio:0/constraint_1_power_limit_uw",
+                 root);
+  write_text_file(path, "140000000\n");
+  (void)snprintf(path, sizeof(path), "%s/class/powercap/intel-rapl-mmio:0/name",
+                 root);
+  write_text_file(path, "package-0\n");
+  (void)snprintf(path, sizeof(path),
+                 "%s/class/powercap/intel-rapl-mmio:0/enabled", root);
+  write_text_file(path, "1\n");
+  (void)snprintf(path, sizeof(path),
+                 "%s/class/powercap/intel-rapl-mmio:0/constraint_0_name", root);
+  write_text_file(path, "long_term\n");
+  (void)snprintf(path, sizeof(path),
+                 "%s/class/powercap/intel-rapl-mmio:0/constraint_1_name", root);
+  write_text_file(path, "short_term\n");
   (void)snprintf(path, sizeof(path), "%s/firmware/acpi/platform_profile", root);
   write_text_file(path, "performance\n");
 }
@@ -139,11 +174,19 @@ void lcc_run_backend_converged_tests(void) {
   assert(strcmp(state.backend_selected, "standard") == 0);
   assert(strcmp(state.execution.read_state, "standard") == 0);
   assert(strcmp(state.execution.apply_mode, "standard") == 0);
-  assert(strcmp(state.execution.apply_power_limits, "amw0") == 0);
+  assert(strcmp(state.execution.apply_power_limits, "standard") == 0);
   assert(strcmp(state.execution.apply_fan_table, "amw0") == 0);
   assert(strcmp(result.executor_backend, "standard") == 0);
-  assert(strstr(state.backend_fallback_reason, "apply_power_limits") != NULL);
   assert(strstr(state.backend_fallback_reason, "apply_fan_table") != NULL);
+  assert(strcmp(state.effective_meta.source, "mixed") == 0);
+  assert(strcmp(state.effective_meta.freshness, "mixed") == 0);
+  assert(strcmp(state.effective_meta.profile.source, "cache") == 0);
+  assert(strcmp(state.effective_meta.power.source, "standard") == 0);
+  assert(strcmp(state.effective_meta.power.freshness, "live") == 0);
+  assert(strcmp(state.effective_meta.power_fields.pl1.source, "standard") == 0);
+  assert(strcmp(state.effective_meta.power_fields.pl2.source, "standard") == 0);
+  assert(state.effective_meta.power_fields.pl4.source[0] == '\0');
+  assert(state.effective_meta.power_fields.tcc_offset.source[0] == '\0');
 
   assert(lcc_backend_apply_mode(&converged_handle, LCC_MODE_OFFICE, &result) ==
          LCC_OK);
@@ -161,14 +204,30 @@ void lcc_run_backend_converged_tests(void) {
   limits.pl2.value = 120u;
   assert(lcc_backend_apply_power_limits(&converged_handle, &limits, &result) ==
          LCC_OK);
-  assert(strcmp(result.executor_backend, "amw0") == 0);
-  assert(!result.hardware_write);
+  assert(strcmp(result.executor_backend, "standard") == 0);
+  assert(result.hardware_write);
+  assert(strcmp(result.stage, "verify-powercap") == 0);
+  (void)snprintf(path, sizeof(path),
+                 "%s/class/powercap/intel-rapl:0/constraint_0_power_limit_uw",
+                 root);
+  read_text_file(path, profile_value, sizeof(profile_value));
+  assert(strcmp(profile_value, "70000000\n") == 0);
+  (void)snprintf(path, sizeof(path),
+                 "%s/class/powercap/intel-rapl-mmio:0/constraint_0_power_limit_uw",
+                 root);
+  read_text_file(path, profile_value, sizeof(profile_value));
+  assert(strcmp(profile_value, "140000000\n") == 0);
 
   memset(&state, 0, sizeof(state));
   assert(lcc_backend_read_state(&converged_handle, &state, &result) == LCC_OK);
   assert(state.effective.has_power_limits);
   assert(state.effective.power_limits.pl1.value == 70u);
   assert(state.effective.power_limits.pl2.value == 120u);
+  assert(strcmp(state.effective_meta.power.source, "standard") == 0);
+  assert(strcmp(state.effective_meta.power.freshness, "live") == 0);
+  assert(strcmp(state.effective_meta.power_fields.pl1.source, "standard") == 0);
+  assert(strcmp(state.effective_meta.power_fields.pl2.source, "standard") == 0);
+  assert(state.effective_meta.power_fields.tcc_offset.source[0] == '\0');
 
   assert(lcc_backend_apply_fan_table(&converged_handle, "M4T1", &result) ==
          LCC_OK);
@@ -179,6 +238,8 @@ void lcc_run_backend_converged_tests(void) {
   assert(lcc_backend_read_state(&converged_handle, &state, &result) == LCC_OK);
   assert(strcmp(state.effective.fan_table, "M4T1") == 0);
   assert(strcmp(state.effective.profile, "custom") == 0);
+  assert(strcmp(state.effective_meta.fan_table.source, "cache") == 0);
+  assert(strcmp(state.effective_meta.profile.source, "cache") == 0);
 
   (void)snprintf(path, sizeof(path), "%s/firmware/acpi/platform_profile", root);
   assert(unlink(path) == 0);
@@ -201,10 +262,20 @@ void lcc_run_backend_converged_tests(void) {
                  "%s/class/powercap/intel-rapl:0/constraint_1_power_limit_uw",
                  root);
   assert(unlink(path) == 0);
+  (void)snprintf(path, sizeof(path),
+                 "%s/class/powercap/intel-rapl-mmio:0/constraint_0_power_limit_uw",
+                 root);
+  assert(unlink(path) == 0);
+  (void)snprintf(path, sizeof(path),
+                 "%s/class/powercap/intel-rapl-mmio:0/constraint_1_power_limit_uw",
+                 root);
+  assert(unlink(path) == 0);
 
   memset(&state, 0, sizeof(state));
   assert(lcc_backend_read_state(&converged_handle, &state, &result) == LCC_OK);
   assert(strcmp(state.backend_name, "amw0") == 0);
   assert(strcmp(result.executor_backend, "amw0") == 0);
   assert(strstr(result.detail, "fell back from standard to amw0") != NULL);
+  assert(strcmp(state.effective_meta.source, "cache") == 0);
+  assert(strcmp(state.effective_meta.freshness, "cache") == 0);
 }

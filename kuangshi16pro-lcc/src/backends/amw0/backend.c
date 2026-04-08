@@ -134,6 +134,11 @@ static void seed_shadow_state(lcc_amw0_backend_t *amw0) {
   (void)copy_name(amw0->shadow_state.effective.fan_table,
                   sizeof(amw0->shadow_state.effective.fan_table),
                   "system-default");
+  (void)lcc_backend_effective_component_set(
+      &amw0->shadow_state.effective_meta.profile, "cache", "cache");
+  (void)lcc_backend_effective_component_set(
+      &amw0->shadow_state.effective_meta.fan_table, "cache", "cache");
+  lcc_backend_state_finalize_effective_meta(&amw0->shadow_state);
 }
 
 static lcc_status_t ensure_ecrr_path(lcc_amw0_backend_t *amw0) {
@@ -189,6 +194,65 @@ static void set_mode_profile_state(lcc_state_snapshot_t *state,
                   profile_name);
 }
 
+static void set_component_from_readback(
+    lcc_state_component_attribution_t *component, bool has_live,
+    bool has_cache, const char *live_source) {
+  if (component == NULL) {
+    return;
+  }
+
+  if (has_live && has_cache) {
+    (void)lcc_backend_effective_component_set(component, "mixed", "mixed");
+    return;
+  }
+  if (has_live) {
+    (void)lcc_backend_effective_component_set(component, live_source, "live");
+    return;
+  }
+  if (has_cache) {
+    (void)lcc_backend_effective_component_set(component, "cache", "cache");
+    return;
+  }
+
+  (void)lcc_backend_effective_component_set(component, NULL, NULL);
+}
+
+static bool power_value_is_plausible(lcc_power_field_kind_t field_kind,
+                                     uint8_t raw) {
+  if (field_kind == LCC_POWER_FIELD_TCC_OFFSET) {
+    return true;
+  }
+
+  return raw > 0u;
+}
+
+static void set_power_field_from_readback(
+    lcc_effective_state_metadata_t *effective_meta,
+    lcc_power_field_kind_t field_kind, bool has_live, bool has_cache) {
+  if (effective_meta == NULL) {
+    return;
+  }
+
+  if (has_live && has_cache) {
+    (void)lcc_backend_effective_power_field_set(effective_meta, field_kind,
+                                                "mixed", "mixed");
+    return;
+  }
+  if (has_live) {
+    (void)lcc_backend_effective_power_field_set(effective_meta, field_kind,
+                                                "amw0", "live");
+    return;
+  }
+  if (has_cache) {
+    (void)lcc_backend_effective_power_field_set(effective_meta, field_kind,
+                                                "cache", "cache");
+    return;
+  }
+
+  (void)lcc_backend_effective_power_field_set(effective_meta, field_kind, NULL,
+                                              NULL);
+}
+
 static lcc_status_t amw0_probe(void *ctx,
                                lcc_backend_capabilities_t *capabilities,
                                lcc_backend_result_t *result) {
@@ -223,6 +287,12 @@ static lcc_status_t amw0_read_state(void *ctx, lcc_state_snapshot_t *state,
                                     lcc_backend_result_t *result) {
   lcc_amw0_backend_t *amw0 = ctx;
   bool any_live_value = false;
+  bool profile_live = false;
+  bool profile_cache = false;
+  bool power_live[4] = {false, false, false, false};
+  bool power_cache[4] = {false, false, false, false};
+  bool thermal_live[4] = {false, false, false, false};
+  bool thermal_cache[4] = {false, false, false, false};
   uint8_t raw = 0;
 
   if (amw0 == NULL || state == NULL) {
@@ -235,39 +305,82 @@ static lcc_status_t amw0_read_state(void *ctx, lcc_state_snapshot_t *state,
   (void)copy_name(state->backend_name, sizeof(state->backend_name), "amw0");
   (void)lcc_backend_state_set_metadata(state, "amw0", "amw0", NULL,
                                        &amw0->shadow_state.execution);
+  profile_cache = state->effective.profile[0] != '\0';
+  power_cache[0] = state->effective.power_limits.pl1.present;
+  power_cache[1] = state->effective.power_limits.pl2.present;
+  power_cache[2] = state->effective.power_limits.pl4.present;
+  power_cache[3] = state->effective.power_limits.tcc_offset.present;
+  thermal_cache[0] = state->thermal.has_cpu_temp_c;
+  thermal_cache[1] = state->thermal.has_gpu_temp_c;
+  thermal_cache[2] = state->thermal.has_cpu_fan_rpm;
+  thermal_cache[3] = state->thermal.has_gpu_fan_rpm;
+  set_component_from_readback(&state->effective_meta.fan_table, false,
+                              state->effective.fan_table[0] != '\0', "amw0");
 
   if (amw0->transport.dry_run) {
+    set_component_from_readback(&state->effective_meta.profile, false,
+                                profile_cache, "amw0");
+    lcc_backend_effective_power_set_from_limits(
+        &state->effective_meta,
+        (power_cache[0] || power_cache[1] || power_cache[2] || power_cache[3])
+            ? &state->effective.power_limits
+            : NULL,
+        "cache", "cache");
+    set_component_from_readback(
+        &state->effective_meta.thermal, false,
+        thermal_cache[0] || thermal_cache[1] || thermal_cache[2] ||
+            thermal_cache[3],
+        "amw0");
+    lcc_backend_state_finalize_effective_meta(state);
     return LCC_OK;
   }
 
   if (read_live_byte(amw0, LCC_AMW0_ADDR_MODE_CONTROL, &raw) == LCC_OK) {
     set_mode_profile_state(state, mode_from_control(raw));
+    profile_live = true;
+    profile_cache = false;
     any_live_value = true;
   }
   if (read_live_byte(amw0, LCC_AMW0_ADDR_PL1, &raw) == LCC_OK) {
-    state->requested.power_limits.pl1.present = true;
-    state->requested.power_limits.pl1.value = raw;
-    state->effective.power_limits.pl1 = state->requested.power_limits.pl1;
-    any_live_value = true;
+    if (power_value_is_plausible(LCC_POWER_FIELD_PL1, raw)) {
+      state->requested.power_limits.pl1.present = true;
+      state->requested.power_limits.pl1.value = raw;
+      state->effective.power_limits.pl1 = state->requested.power_limits.pl1;
+      power_live[0] = true;
+      power_cache[0] = false;
+      any_live_value = true;
+    }
   }
   if (read_live_byte(amw0, LCC_AMW0_ADDR_PL2, &raw) == LCC_OK) {
-    state->requested.power_limits.pl2.present = true;
-    state->requested.power_limits.pl2.value = raw;
-    state->effective.power_limits.pl2 = state->requested.power_limits.pl2;
-    any_live_value = true;
+    if (power_value_is_plausible(LCC_POWER_FIELD_PL2, raw)) {
+      state->requested.power_limits.pl2.present = true;
+      state->requested.power_limits.pl2.value = raw;
+      state->effective.power_limits.pl2 = state->requested.power_limits.pl2;
+      power_live[1] = true;
+      power_cache[1] = false;
+      any_live_value = true;
+    }
   }
   if (read_live_byte(amw0, LCC_AMW0_ADDR_PL4, &raw) == LCC_OK) {
-    state->requested.power_limits.pl4.present = true;
-    state->requested.power_limits.pl4.value = raw;
-    state->effective.power_limits.pl4 = state->requested.power_limits.pl4;
-    any_live_value = true;
+    if (power_value_is_plausible(LCC_POWER_FIELD_PL4, raw)) {
+      state->requested.power_limits.pl4.present = true;
+      state->requested.power_limits.pl4.value = raw;
+      state->effective.power_limits.pl4 = state->requested.power_limits.pl4;
+      power_live[2] = true;
+      power_cache[2] = false;
+      any_live_value = true;
+    }
   }
   if (read_live_byte(amw0, LCC_AMW0_ADDR_TCC_OFFSET, &raw) == LCC_OK) {
-    state->requested.power_limits.tcc_offset.present = true;
-    state->requested.power_limits.tcc_offset.value = raw;
-    state->effective.power_limits.tcc_offset =
-        state->requested.power_limits.tcc_offset;
-    any_live_value = true;
+    if (power_value_is_plausible(LCC_POWER_FIELD_TCC_OFFSET, raw)) {
+      state->requested.power_limits.tcc_offset.present = true;
+      state->requested.power_limits.tcc_offset.value = raw;
+      state->effective.power_limits.tcc_offset =
+          state->requested.power_limits.tcc_offset;
+      power_live[3] = true;
+      power_cache[3] = false;
+      any_live_value = true;
+    }
   }
   state->requested.has_power_limits = state->requested.power_limits.pl1.present ||
                                       state->requested.power_limits.pl2.present ||
@@ -278,14 +391,38 @@ static lcc_status_t amw0_read_state(void *ctx, lcc_state_snapshot_t *state,
   if (read_live_byte(amw0, LCC_AMW0_ADDR_CPUT, &raw) == LCC_OK && raw > 0u) {
     state->thermal.has_cpu_temp_c = true;
     state->thermal.cpu_temp_c = raw;
+    thermal_live[0] = true;
+    thermal_cache[0] = false;
     any_live_value = true;
   }
   if (read_live_byte(amw0, LCC_AMW0_ADDR_PCHT, &raw) == LCC_OK && raw > 0u) {
     state->thermal.has_gpu_temp_c = true;
     state->thermal.gpu_temp_c = raw;
+    thermal_live[1] = true;
+    thermal_cache[1] = false;
     any_live_value = true;
   }
 
+  set_component_from_readback(&state->effective_meta.profile, profile_live,
+                              profile_cache, "amw0");
+  lcc_backend_effective_power_clear(&state->effective_meta);
+  set_power_field_from_readback(&state->effective_meta, LCC_POWER_FIELD_PL1,
+                                power_live[0], power_cache[0]);
+  set_power_field_from_readback(&state->effective_meta, LCC_POWER_FIELD_PL2,
+                                power_live[1], power_cache[1]);
+  set_power_field_from_readback(&state->effective_meta, LCC_POWER_FIELD_PL4,
+                                power_live[2], power_cache[2]);
+  set_power_field_from_readback(&state->effective_meta,
+                                LCC_POWER_FIELD_TCC_OFFSET, power_live[3],
+                                power_cache[3]);
+  set_component_from_readback(
+      &state->effective_meta.thermal,
+      thermal_live[0] || thermal_live[1] || thermal_live[2] ||
+          thermal_live[3],
+      thermal_cache[0] || thermal_cache[1] || thermal_cache[2] ||
+          thermal_cache[3],
+      "amw0");
+  lcc_backend_state_finalize_effective_meta(state);
   amw0->shadow_state = *state;
   if (!any_live_value) {
     lcc_backend_result_set_detail(result,
@@ -421,6 +558,9 @@ static lcc_status_t amw0_apply_mode(void *ctx, lcc_operating_mode_t mode,
   }
 
   set_mode_profile_state(&amw0->shadow_state, mode);
+  (void)lcc_backend_effective_component_set(
+      &amw0->shadow_state.effective_meta.profile, "cache", "cache");
+  lcc_backend_state_finalize_effective_meta(&amw0->shadow_state);
   if (result != NULL) {
     result->changed = changed;
     result->hardware_write = !amw0->transport.dry_run;
@@ -528,6 +668,9 @@ static lcc_status_t amw0_apply_power_limits(void *ctx,
   amw0->shadow_state.effective.power_limits = merged;
   amw0->shadow_state.requested.has_power_limits = true;
   amw0->shadow_state.effective.has_power_limits = true;
+  lcc_backend_effective_power_set_from_limits(&amw0->shadow_state.effective_meta,
+                                              &merged, "cache", "cache");
+  lcc_backend_state_finalize_effective_meta(&amw0->shadow_state);
   if (result != NULL) {
     result->changed = changed;
     result->hardware_write = !amw0->transport.dry_run;
@@ -578,7 +721,12 @@ static lcc_status_t amw0_apply_fan_table(void *ctx, const char *table_name,
                     sizeof(amw0->shadow_state.requested.profile), "custom");
     (void)copy_name(amw0->shadow_state.effective.profile,
                     sizeof(amw0->shadow_state.effective.profile), "custom");
+    (void)lcc_backend_effective_component_set(
+        &amw0->shadow_state.effective_meta.profile, "cache", "cache");
   }
+  (void)lcc_backend_effective_component_set(
+      &amw0->shadow_state.effective_meta.fan_table, "cache", "cache");
+  lcc_backend_state_finalize_effective_meta(&amw0->shadow_state);
   if (result != NULL) {
     result->changed = changed;
     result->hardware_write = !amw0->transport.dry_run;

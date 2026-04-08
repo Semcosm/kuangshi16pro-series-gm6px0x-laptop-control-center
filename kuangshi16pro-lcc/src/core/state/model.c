@@ -3,18 +3,61 @@
 #include <stdio.h>
 #include <string.h>
 
-static int append_power_json(char *buffer, size_t buffer_len,
-                             const lcc_state_target_t *target) {
-  if (target == NULL || !target->has_power_limits) {
+static int append_u16_or_null(char *buffer, size_t buffer_len, bool present,
+                              uint16_t value) {
+  if (!present) {
     return snprintf(buffer, buffer_len, "null");
   }
 
+  return snprintf(buffer, buffer_len, "%u", (unsigned int)value);
+}
+
+static int append_u8_or_null(char *buffer, size_t buffer_len, bool present,
+                             uint8_t value) {
+  if (!present) {
+    return snprintf(buffer, buffer_len, "null");
+  }
+
+  return snprintf(buffer, buffer_len, "%u", (unsigned int)value);
+}
+
+static int append_bool_or_null(char *buffer, size_t buffer_len, bool present,
+                               bool value) {
+  if (!present) {
+    return snprintf(buffer, buffer_len, "null");
+  }
+
+  return snprintf(buffer, buffer_len, "%s", value ? "true" : "false");
+}
+
+static int append_power_json(char *buffer, size_t buffer_len,
+                             const lcc_state_target_t *target) {
+  char pl1_json[16];
+  char pl2_json[16];
+  char pl4_json[16];
+  char tcc_offset_json[16];
+
+  if (target == NULL || !target->has_power_limits) {
+    return snprintf(buffer, buffer_len, "null");
+  }
+  if (append_u8_or_null(pl1_json, sizeof(pl1_json),
+                        target->power_limits.pl1.present,
+                        target->power_limits.pl1.value) < 0 ||
+      append_u8_or_null(pl2_json, sizeof(pl2_json),
+                        target->power_limits.pl2.present,
+                        target->power_limits.pl2.value) < 0 ||
+      append_u8_or_null(pl4_json, sizeof(pl4_json),
+                        target->power_limits.pl4.present,
+                        target->power_limits.pl4.value) < 0 ||
+      append_u8_or_null(tcc_offset_json, sizeof(tcc_offset_json),
+                        target->power_limits.tcc_offset.present,
+                        target->power_limits.tcc_offset.value) < 0) {
+    return -1;
+  }
+
   return snprintf(buffer, buffer_len,
-                  "{\"pl1\":%u,\"pl2\":%u,\"pl4\":%u,\"tcc_offset\":%u}",
-                  (unsigned int)target->power_limits.pl1.value,
-                  (unsigned int)target->power_limits.pl2.value,
-                  (unsigned int)target->power_limits.pl4.value,
-                  (unsigned int)target->power_limits.tcc_offset.value);
+                  "{\"pl1\":%s,\"pl2\":%s,\"pl4\":%s,\"tcc_offset\":%s}",
+                  pl1_json, pl2_json, pl4_json, tcc_offset_json);
 }
 
 static int append_target_json(char *buffer, size_t buffer_len,
@@ -34,24 +77,6 @@ static int append_target_json(char *buffer, size_t buffer_len,
   return snprintf(buffer, buffer_len,
                   "{\"profile\":\"%s\",\"fan_table\":\"%s\",\"power\":%s}",
                   target->profile, target->fan_table, power_json);
-}
-
-static int append_u16_or_null(char *buffer, size_t buffer_len, bool present,
-                              uint16_t value) {
-  if (!present) {
-    return snprintf(buffer, buffer_len, "null");
-  }
-
-  return snprintf(buffer, buffer_len, "%u", (unsigned int)value);
-}
-
-static int append_u8_or_null(char *buffer, size_t buffer_len, bool present,
-                             uint8_t value) {
-  if (!present) {
-    return snprintf(buffer, buffer_len, "null");
-  }
-
-  return snprintf(buffer, buffer_len, "%u", (unsigned int)value);
 }
 
 static int append_string_or_null(char *buffer, size_t buffer_len,
@@ -108,6 +133,114 @@ static int append_execution_json(char *buffer, size_t buffer_len,
                   apply_power_limits_json, apply_fan_table_json);
 }
 
+static int append_component_attribution_json(
+    char *buffer, size_t buffer_len,
+    const lcc_state_component_attribution_t *component) {
+  char source_json[64];
+  char freshness_json[64];
+
+  if (buffer == NULL || buffer_len == 0u || component == NULL) {
+    return -1;
+  }
+  if (append_string_or_null(source_json, sizeof(source_json),
+                            component->source) < 0 ||
+      append_string_or_null(freshness_json, sizeof(freshness_json),
+                            component->freshness) < 0) {
+    return -1;
+  }
+
+  return snprintf(buffer, buffer_len, "{\"source\":%s,\"freshness\":%s}",
+                  source_json, freshness_json);
+}
+
+static int append_power_attribution_json(
+    char *buffer, size_t buffer_len,
+    const lcc_effective_state_metadata_t *effective_meta) {
+  char source_json[64];
+  char freshness_json[64];
+  char pl1_json[96];
+  char pl2_json[96];
+  char pl4_json[96];
+  char tcc_offset_json[96];
+
+  if (buffer == NULL || buffer_len == 0u || effective_meta == NULL) {
+    return -1;
+  }
+  if (append_string_or_null(source_json, sizeof(source_json),
+                            effective_meta->power.source) < 0 ||
+      append_string_or_null(freshness_json, sizeof(freshness_json),
+                            effective_meta->power.freshness) < 0 ||
+      append_component_attribution_json(pl1_json, sizeof(pl1_json),
+                                        &effective_meta->power_fields.pl1) < 0 ||
+      append_component_attribution_json(pl2_json, sizeof(pl2_json),
+                                        &effective_meta->power_fields.pl2) < 0 ||
+      append_component_attribution_json(pl4_json, sizeof(pl4_json),
+                                        &effective_meta->power_fields.pl4) < 0 ||
+      append_component_attribution_json(
+          tcc_offset_json, sizeof(tcc_offset_json),
+          &effective_meta->power_fields.tcc_offset) < 0) {
+    return -1;
+  }
+
+  return snprintf(buffer, buffer_len,
+                  "{"
+                  "\"source\":%s,"
+                  "\"freshness\":%s,"
+                  "\"fields\":{"
+                  "\"pl1\":%s,"
+                  "\"pl2\":%s,"
+                  "\"pl4\":%s,"
+                  "\"tcc_offset\":%s"
+                  "}"
+                  "}",
+                  source_json, freshness_json, pl1_json, pl2_json, pl4_json,
+                  tcc_offset_json);
+}
+
+static int append_effective_meta_json(
+    char *buffer, size_t buffer_len,
+    const lcc_effective_state_metadata_t *effective_meta) {
+  char source_json[64];
+  char freshness_json[64];
+  char profile_json[96];
+  char fan_table_json[96];
+  char power_json[512];
+  char thermal_json[96];
+
+  if (buffer == NULL || buffer_len == 0u || effective_meta == NULL) {
+    return -1;
+  }
+  if (append_string_or_null(source_json, sizeof(source_json),
+                            effective_meta->source) < 0 ||
+      append_string_or_null(freshness_json, sizeof(freshness_json),
+                            effective_meta->freshness) < 0 ||
+      append_component_attribution_json(profile_json, sizeof(profile_json),
+                                        &effective_meta->profile) < 0 ||
+      append_component_attribution_json(fan_table_json,
+                                        sizeof(fan_table_json),
+                                        &effective_meta->fan_table) < 0 ||
+      append_power_attribution_json(power_json, sizeof(power_json),
+                                    effective_meta) < 0 ||
+      append_component_attribution_json(thermal_json, sizeof(thermal_json),
+                                        &effective_meta->thermal) < 0) {
+    return -1;
+  }
+
+  return snprintf(buffer, buffer_len,
+                  "{"
+                  "\"source\":%s,"
+                  "\"freshness\":%s,"
+                  "\"components\":{"
+                  "\"profile\":%s,"
+                  "\"fan_table\":%s,"
+                  "\"power\":%s,"
+                  "\"thermal\":%s"
+                  "}"
+                  "}",
+                  source_json, freshness_json, profile_json, fan_table_json,
+                  power_json, thermal_json);
+}
+
 static const char *transaction_state_name(lcc_transaction_state_t state) {
   switch (state) {
     case LCC_TRANSACTION_STATE_IDLE:
@@ -127,6 +260,7 @@ lcc_status_t lcc_state_render_json(
     size_t buffer_len) {
   char requested_json[256];
   char effective_json[256];
+  char effective_meta_json[1024];
   char pending_json[256];
   char execution_json[320];
   char operation_json[64];
@@ -137,6 +271,7 @@ lcc_status_t lcc_state_render_json(
   char last_apply_stage_json[128];
   char last_apply_backend_json[64];
   char last_apply_error_json[64];
+  char last_apply_hardware_write_json[16];
   char last_apply_target_json[256];
   char thermal_cpu_temp[32];
   char thermal_gpu_temp[32];
@@ -152,7 +287,10 @@ lcc_status_t lcc_state_render_json(
   if (append_target_json(requested_json, sizeof(requested_json),
                          &state->requested) < 0 ||
       append_target_json(effective_json, sizeof(effective_json),
-                         &state->effective) < 0) {
+                         &state->effective) < 0 ||
+      append_effective_meta_json(effective_meta_json,
+                                 sizeof(effective_meta_json),
+                                 &state->effective_meta) < 0) {
     return LCC_ERR_IO;
   }
   if (state->transaction.has_pending_target) {
@@ -213,6 +351,12 @@ lcc_status_t lcc_state_render_json(
     (void)snprintf(last_apply_error_json, sizeof(last_apply_error_json),
                    "\"%s\"", lcc_status_string(state->last_apply.error));
   }
+  if (append_bool_or_null(last_apply_hardware_write_json,
+                          sizeof(last_apply_hardware_write_json),
+                          state->last_apply.has_hardware_write,
+                          state->last_apply.hardware_write) < 0) {
+    return LCC_ERR_IO;
+  }
   (void)append_u8_or_null(thermal_cpu_temp, sizeof(thermal_cpu_temp),
                           state->thermal.has_cpu_temp_c,
                           state->thermal.cpu_temp_c);
@@ -240,10 +384,12 @@ lcc_status_t lcc_state_render_json(
       "\"platform_profile\":%s,\"powercap\":%s,\"mux_reboot_required\":%s},"
       "\"requested\":%s,"
       "\"effective\":%s,"
+      "\"effective_meta\":%s,"
       "\"pending\":%s,"
       "\"last_apply_stage\":%s,"
       "\"last_apply_backend\":%s,"
       "\"last_apply_error\":%s,"
+      "\"last_apply_hardware_write\":%s,"
       "\"last_apply_target\":%s,"
       "\"transaction\":{\"state\":\"%s\",\"operation\":%s,\"stage\":%s,\"last_error\":%s},"
       "\"thermal\":{\"cpu_temp_c\":%s,\"gpu_temp_c\":%s,"
@@ -259,8 +405,10 @@ lcc_status_t lcc_state_render_json(
       backend_capabilities->has_platform_profile ? "true" : "false",
       backend_capabilities->has_powercap ? "true" : "false",
       backend_capabilities->needs_reboot_for_mux ? "true" : "false",
-      requested_json, effective_json, pending_json, last_apply_stage_json,
-      last_apply_backend_json, last_apply_error_json, last_apply_target_json,
+      requested_json, effective_json, effective_meta_json, pending_json,
+      last_apply_stage_json,
+      last_apply_backend_json, last_apply_error_json,
+      last_apply_hardware_write_json, last_apply_target_json,
       transaction_state_name(state->transaction.state), operation_json,
       stage_json,
       last_error_json, thermal_cpu_temp, thermal_gpu_temp, thermal_cpu_fan,

@@ -40,6 +40,9 @@ static void test_manager_profile_and_fan_updates(void) {
   assert(strstr(json, "\"cpu_fan_rpm\":2480") != NULL);
   assert(strstr(json, "\"gpu_temp_c\":56") != NULL);
   assert(strstr(json, "\"last_apply_backend\":\"mock\"") != NULL);
+  assert(strstr(json, "\"last_apply_hardware_write\":false") != NULL);
+  assert(strstr(json, "\"effective_meta\":{\"source\":\"mock\",\"freshness\":\"live\"") !=
+         NULL);
   assert(strstr(json, "\"last_apply_target\":{\"profile\":\"turbo\"") != NULL);
   assert(strstr(json, "\"last_apply_error\":null") != NULL);
 }
@@ -68,6 +71,9 @@ static void test_manager_power_update(void) {
   assert(strstr(json, "\"pl2\":130") != NULL);
   assert(strstr(json, "\"pl4\":200") != NULL);
   assert(strstr(json, "\"tcc_offset\":5") != NULL);
+  assert(strstr(json,
+                "\"effective_meta\":{\"source\":\"mock\",\"freshness\":\"live\"") !=
+         NULL);
 }
 
 static void test_manager_rejects_unsafe_names(void) {

@@ -3,6 +3,8 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "backends/backend.h"
+
 static lcc_status_t copy_name(char *buffer, size_t buffer_len,
                               const char *value) {
   const int written = snprintf(buffer, buffer_len, "%s", value);
@@ -19,6 +21,8 @@ static lcc_status_t copy_name(char *buffer, size_t buffer_len,
 lcc_status_t lcc_state_reader_refresh(const lcc_backend_t *backend,
                                       lcc_state_snapshot_t *state) {
   lcc_backend_result_t result;
+  lcc_state_snapshot_t previous;
+  lcc_state_snapshot_t refreshed;
   lcc_transaction_snapshot_t transaction;
   lcc_last_apply_snapshot_t last_apply;
   lcc_execution_snapshot_t execution;
@@ -30,43 +34,49 @@ lcc_status_t lcc_state_reader_refresh(const lcc_backend_t *backend,
     return LCC_ERR_INVALID_ARGUMENT;
   }
 
+  previous = *state;
   transaction = state->transaction;
   last_apply = state->last_apply;
   execution = state->execution;
   memcpy(backend_selected, state->backend_selected, sizeof(backend_selected));
   memcpy(backend_fallback_reason, state->backend_fallback_reason,
          sizeof(backend_fallback_reason));
-  memset(state, 0, sizeof(*state));
-  status = lcc_backend_read_state(backend, state, &result);
+  memset(&refreshed, 0, sizeof(refreshed));
+  status = lcc_backend_read_state(backend, &refreshed, &result);
   if (status != LCC_OK) {
+    *state = previous;
+    lcc_backend_state_mark_effective_cached(state);
     return status;
   }
 
-  if (state->backend_name[0] == '\0') {
-    status = copy_name(state->backend_name, sizeof(state->backend_name),
+  if (refreshed.backend_name[0] == '\0') {
+    status = copy_name(refreshed.backend_name, sizeof(refreshed.backend_name),
                        lcc_backend_name(backend));
     if (status != LCC_OK) {
       return status;
     }
   }
   if (result.hardware_write) {
-    state->hardware_write = true;
+    refreshed.hardware_write = true;
   }
-  state->transaction = transaction;
-  state->last_apply = last_apply;
-  if (state->backend_selected[0] == '\0' && backend_selected[0] != '\0') {
-    (void)copy_name(state->backend_selected, sizeof(state->backend_selected),
+  refreshed.transaction = transaction;
+  refreshed.last_apply = last_apply;
+  if (refreshed.backend_selected[0] == '\0' && backend_selected[0] != '\0') {
+    (void)copy_name(refreshed.backend_selected,
+                    sizeof(refreshed.backend_selected),
                     backend_selected);
   }
-  if (state->backend_fallback_reason[0] == '\0' &&
+  if (refreshed.backend_fallback_reason[0] == '\0' &&
       backend_fallback_reason[0] != '\0') {
-    (void)copy_name(state->backend_fallback_reason,
-                    sizeof(state->backend_fallback_reason),
+    (void)copy_name(refreshed.backend_fallback_reason,
+                    sizeof(refreshed.backend_fallback_reason),
                     backend_fallback_reason);
   }
-  if (state->execution.read_state[0] == '\0' && execution.read_state[0] != '\0') {
-    state->execution = execution;
+  if (refreshed.execution.read_state[0] == '\0' &&
+      execution.read_state[0] != '\0') {
+    refreshed.execution = execution;
   }
+  *state = refreshed;
 
   return LCC_OK;
 }

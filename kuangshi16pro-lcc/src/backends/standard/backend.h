@@ -25,7 +25,12 @@ lcc_status_t lcc_standard_platform_profile_apply_profile(
     lcc_backend_result_t *result);
 lcc_status_t lcc_standard_powercap_probe(const lcc_standard_backend_t *standard,
                                          bool *available);
+lcc_status_t lcc_standard_powercap_can_write(
+    const lcc_standard_backend_t *standard, bool *writable);
 lcc_status_t lcc_standard_powercap_read(const lcc_standard_backend_t *standard,
                                         lcc_state_snapshot_t *state);
+lcc_status_t lcc_standard_powercap_apply(
+    const lcc_standard_backend_t *standard, const lcc_power_limits_t *limits,
+    lcc_backend_result_t *result);
 
 #endif

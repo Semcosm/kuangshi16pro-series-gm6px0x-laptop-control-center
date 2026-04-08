@@ -61,6 +61,8 @@ static void test_amw0_backend_dry_run_apply(void) {
   assert(strcmp(state.execution.apply_power_limits, "amw0") == 0);
   assert(strcmp(result.executor_backend, "amw0") == 0);
   assert(strcmp(state.effective.profile, "office") == 0);
+  assert(strcmp(state.effective_meta.source, "cache") == 0);
+  assert(strcmp(state.effective_meta.freshness, "cache") == 0);
 
   assert(lcc_backend_apply_mode(&backend, LCC_MODE_TURBO, &result) == LCC_OK);
   assert(result.changed);
@@ -71,6 +73,8 @@ static void test_amw0_backend_dry_run_apply(void) {
   memset(&state, 0, sizeof(state));
   assert(lcc_backend_read_state(&backend, &state, &result) == LCC_OK);
   assert(strcmp(state.effective.profile, "turbo") == 0);
+  assert(strcmp(state.effective_meta.source, "cache") == 0);
+  assert(strcmp(state.effective_meta.profile.source, "cache") == 0);
 
   memset(&limits, 0, sizeof(limits));
   limits.pl1.present = true;
@@ -98,6 +102,13 @@ static void test_amw0_backend_dry_run_apply(void) {
   assert(state.effective.power_limits.pl4.value == 140u);
   assert(state.effective.power_limits.tcc_offset.present);
   assert(state.effective.power_limits.tcc_offset.value == 5u);
+  assert(strcmp(state.effective_meta.power.source, "cache") == 0);
+  assert(strcmp(state.effective_meta.power.freshness, "cache") == 0);
+  assert(strcmp(state.effective_meta.power_fields.pl1.source, "cache") == 0);
+  assert(strcmp(state.effective_meta.power_fields.pl2.source, "cache") == 0);
+  assert(strcmp(state.effective_meta.power_fields.pl4.source, "cache") == 0);
+  assert(strcmp(state.effective_meta.power_fields.tcc_offset.source, "cache") ==
+         0);
 
   read_text_file(trace_path, trace_contents, sizeof(trace_contents));
   assert(strstr(trace_contents, "\\_SB.AMW0.WMBC 0x0 0x4") != NULL);
@@ -132,6 +143,8 @@ static void test_amw0_fan_table_dry_run_apply_order(void) {
   assert(lcc_backend_read_state(&backend, &state, &result) == LCC_OK);
   assert(strcmp(state.effective.fan_table, "M4T1") == 0);
   assert(strcmp(state.effective.profile, "custom") == 0);
+  assert(strcmp(state.effective_meta.fan_table.source, "cache") == 0);
+  assert(strcmp(state.effective_meta.profile.source, "cache") == 0);
 
   read_text_file(trace_path, trace_contents, sizeof(trace_contents));
   assert(strstr(trace_contents, "note=SetFanTableThread -> MyFanTableCtrl::SetFanTable (confirmed call edge)") != NULL);
@@ -164,6 +177,8 @@ static void test_amw0_transaction_dry_run_apply(void) {
   assert(lcc_transaction_execute(&manager, &request) == LCC_OK);
   assert(manager.state_cache.transaction.state == LCC_TRANSACTION_STATE_IDLE);
   assert(strcmp(manager.state_cache.effective.profile, "turbo") == 0);
+  assert(strcmp(manager.state_cache.effective_meta.source, "cache") == 0);
+  assert(strcmp(manager.state_cache.effective_meta.freshness, "cache") == 0);
 
   memset(&limits, 0, sizeof(limits));
   limits.pl1.present = true;
@@ -178,6 +193,9 @@ static void test_amw0_transaction_dry_run_apply(void) {
   assert(manager.state_cache.effective.has_power_limits);
   assert(manager.state_cache.effective.power_limits.pl1.value == 70u);
   assert(manager.state_cache.effective.power_limits.pl2.value == 120u);
+  assert(strcmp(manager.state_cache.effective_meta.power.source, "cache") == 0);
+  assert(strcmp(manager.state_cache.effective_meta.power_fields.pl1.source,
+                "cache") == 0);
 }
 
 static void test_amw0_transaction_fan_failure_stage(void) {

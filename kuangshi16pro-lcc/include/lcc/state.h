@@ -55,10 +55,34 @@ typedef struct {
 } lcc_execution_snapshot_t;
 
 typedef struct {
+  char source[LCC_STATE_BACKEND_NAME_MAX];
+  char freshness[LCC_STATE_BACKEND_NAME_MAX];
+} lcc_state_component_attribution_t;
+
+typedef struct {
+  lcc_state_component_attribution_t pl1;
+  lcc_state_component_attribution_t pl2;
+  lcc_state_component_attribution_t pl4;
+  lcc_state_component_attribution_t tcc_offset;
+} lcc_power_field_attribution_t;
+
+typedef struct {
+  char source[LCC_STATE_BACKEND_NAME_MAX];
+  char freshness[LCC_STATE_BACKEND_NAME_MAX];
+  lcc_state_component_attribution_t profile;
+  lcc_state_component_attribution_t fan_table;
+  lcc_state_component_attribution_t power;
+  lcc_power_field_attribution_t power_fields;
+  lcc_state_component_attribution_t thermal;
+} lcc_effective_state_metadata_t;
+
+typedef struct {
   char stage[LCC_STATE_STAGE_MAX];
   char backend[LCC_STATE_BACKEND_NAME_MAX];
   bool has_target;
   lcc_state_target_t target;
+  bool has_hardware_write;
+  bool hardware_write;
   lcc_status_t error;
 } lcc_last_apply_snapshot_t;
 
@@ -70,6 +94,7 @@ typedef struct {
   bool hardware_write;
   lcc_state_target_t requested;
   lcc_state_target_t effective;
+  lcc_effective_state_metadata_t effective_meta;
   lcc_last_apply_snapshot_t last_apply;
   lcc_transaction_snapshot_t transaction;
   lcc_thermal_state_t thermal;

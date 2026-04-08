@@ -3,7 +3,7 @@
 _repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
 
 pkgname=kuangshi16pro-lcc
-pkgver=0
+pkgver=r35.gd417484
 pkgrel=1
 pkgdesc="Linux control center daemon and CLI for the Mechrevo Kuangshi16Pro GM6PX0X series"
 arch=('x86_64')

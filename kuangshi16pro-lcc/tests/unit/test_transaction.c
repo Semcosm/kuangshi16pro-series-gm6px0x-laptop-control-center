@@ -54,8 +54,47 @@ static void init_fake_sysfs(char *root, size_t root_len) {
   make_dir(path);
   (void)snprintf(path, sizeof(path), "%s/class/powercap", root);
   make_dir(path);
+  (void)snprintf(path, sizeof(path), "%s/class/powercap/intel-rapl:0", root);
+  make_dir(path);
+  (void)snprintf(path, sizeof(path), "%s/class/powercap/intel-rapl-mmio:0",
+                 root);
+  make_dir(path);
   (void)snprintf(path, sizeof(path), "%s/firmware/acpi/platform_profile", root);
   write_text_file(path, "performance\n");
+  (void)snprintf(path, sizeof(path),
+                 "%s/class/powercap/intel-rapl:0/constraint_0_power_limit_uw",
+                 root);
+  write_text_file(path, "45000000\n");
+  (void)snprintf(path, sizeof(path),
+                 "%s/class/powercap/intel-rapl:0/constraint_1_power_limit_uw",
+                 root);
+  write_text_file(path, "90000000\n");
+  (void)snprintf(path, sizeof(path), "%s/class/powercap/intel-rapl:0/name",
+                 root);
+  write_text_file(path, "package-0\n");
+  (void)snprintf(path, sizeof(path), "%s/class/powercap/intel-rapl:0/constraint_0_name",
+                 root);
+  write_text_file(path, "long_term\n");
+  (void)snprintf(path, sizeof(path), "%s/class/powercap/intel-rapl:0/constraint_1_name",
+                 root);
+  write_text_file(path, "short_term\n");
+  (void)snprintf(path, sizeof(path),
+                 "%s/class/powercap/intel-rapl-mmio:0/constraint_0_power_limit_uw",
+                 root);
+  write_text_file(path, "140000000\n");
+  (void)snprintf(path, sizeof(path),
+                 "%s/class/powercap/intel-rapl-mmio:0/constraint_1_power_limit_uw",
+                 root);
+  write_text_file(path, "140000000\n");
+  (void)snprintf(path, sizeof(path), "%s/class/powercap/intel-rapl-mmio:0/name",
+                 root);
+  write_text_file(path, "package-0\n");
+  (void)snprintf(path, sizeof(path),
+                 "%s/class/powercap/intel-rapl-mmio:0/constraint_0_name", root);
+  write_text_file(path, "long_term\n");
+  (void)snprintf(path, sizeof(path),
+                 "%s/class/powercap/intel-rapl-mmio:0/constraint_1_name", root);
+  write_text_file(path, "short_term\n");
 }
 
 static lcc_status_t route_failure_probe(void *ctx,
@@ -151,6 +190,8 @@ static void test_transaction_happy_path(void) {
   assert(manager.state_cache.last_apply.error == LCC_OK);
   assert(strcmp(manager.state_cache.last_apply.stage, "apply") == 0);
   assert(strcmp(manager.state_cache.last_apply.backend, "mock") == 0);
+  assert(strcmp(manager.state_cache.effective_meta.source, "mock") == 0);
+  assert(strcmp(manager.state_cache.effective_meta.freshness, "live") == 0);
 }
 
 static void test_transaction_failure_path(void) {
@@ -298,9 +339,9 @@ static void test_transaction_converged_route_attribution_records_executor(void) 
   assert(strcmp(manager.state_cache.backend_name, "standard") == 0);
   assert(strcmp(manager.state_cache.backend_selected, "standard") == 0);
   assert(strcmp(manager.state_cache.execution.read_state, "standard") == 0);
-  assert(strcmp(manager.state_cache.execution.apply_power_limits, "amw0") == 0);
-  assert(strcmp(manager.state_cache.last_apply.stage, "write-pl2") == 0);
-  assert(strcmp(manager.state_cache.last_apply.backend, "amw0") == 0);
+  assert(strcmp(manager.state_cache.execution.apply_power_limits, "standard") == 0);
+  assert(strcmp(manager.state_cache.last_apply.stage, "verify-powercap") == 0);
+  assert(strcmp(manager.state_cache.last_apply.backend, "standard") == 0);
   assert(manager.state_cache.last_apply.error == LCC_OK);
   assert(manager.state_cache.last_apply.has_target);
   assert(manager.state_cache.effective.has_power_limits);
@@ -308,6 +349,11 @@ static void test_transaction_converged_route_attribution_records_executor(void) 
   assert(manager.state_cache.effective.power_limits.pl1.value == 70u);
   assert(manager.state_cache.effective.power_limits.pl2.present);
   assert(manager.state_cache.effective.power_limits.pl2.value == 120u);
+  assert(strcmp(manager.state_cache.effective_meta.source, "mixed") == 0);
+  assert(strcmp(manager.state_cache.effective_meta.freshness, "mixed") == 0);
+  assert(strcmp(manager.state_cache.effective_meta.power.source, "standard") == 0);
+  assert(strcmp(manager.state_cache.effective_meta.power_fields.pl1.source,
+                "standard") == 0);
 }
 
 void lcc_run_transaction_tests(void) {

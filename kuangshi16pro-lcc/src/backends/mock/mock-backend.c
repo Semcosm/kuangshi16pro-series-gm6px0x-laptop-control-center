@@ -125,6 +125,9 @@ static lcc_status_t mock_apply_profile(void *ctx, const char *profile_name,
   if (result != NULL) {
     result->changed = changed;
   }
+  (void)lcc_backend_effective_component_set(&mock->state.effective_meta.profile,
+                                            "mock", "live");
+  lcc_backend_state_finalize_effective_meta(&mock->state);
   return LCC_OK;
 }
 
@@ -189,6 +192,9 @@ static lcc_status_t mock_apply_power_limits(void *ctx,
   mock->state.effective.power_limits = merged;
   mock->state.requested.has_power_limits = true;
   mock->state.effective.has_power_limits = true;
+  lcc_backend_effective_power_set_from_limits(&mock->state.effective_meta,
+                                              &merged, "mock", "live");
+  lcc_backend_state_finalize_effective_meta(&mock->state);
 
   if (result != NULL) {
     result->changed = changed;
@@ -229,6 +235,9 @@ static lcc_status_t mock_apply_fan_table(void *ctx, const char *table_name,
   if (result != NULL) {
     result->changed = changed;
   }
+  (void)lcc_backend_effective_component_set(
+      &mock->state.effective_meta.fan_table, "mock", "live");
+  lcc_backend_state_finalize_effective_meta(&mock->state);
   return LCC_OK;
 }
 
@@ -288,6 +297,16 @@ void lcc_mock_backend_seed_defaults(lcc_mock_backend_t *mock) {
   mock->state.thermal.cpu_fan_rpm = 2480u;
   mock->state.thermal.has_gpu_fan_rpm = true;
   mock->state.thermal.gpu_fan_rpm = 2310u;
+  (void)lcc_backend_effective_component_set(&mock->state.effective_meta.profile,
+                                            "mock", "live");
+  (void)lcc_backend_effective_component_set(
+      &mock->state.effective_meta.fan_table, "mock", "live");
+  lcc_backend_effective_power_set_from_limits(&mock->state.effective_meta,
+                                              &mock->state.effective.power_limits,
+                                              "mock", "live");
+  (void)lcc_backend_effective_component_set(&mock->state.effective_meta.thermal,
+                                            "mock", "live");
+  lcc_backend_state_finalize_effective_meta(&mock->state);
 }
 
 lcc_status_t lcc_mock_backend_init(lcc_mock_backend_t *mock,

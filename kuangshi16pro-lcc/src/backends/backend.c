@@ -1,4 +1,4 @@
-#include "lcc/backend.h"
+#include "backends/backend.h"
 
 #include <stddef.h>
 #include <stdio.h>
@@ -24,6 +24,83 @@ lcc_status_t lcc_backend_copy_text(char *buffer, size_t buffer_len,
   }
 
   return LCC_OK;
+}
+
+static bool has_text(const char *value) {
+  return value != NULL && value[0] != '\0';
+}
+
+static void clear_text(char *buffer, size_t buffer_len) {
+  if (buffer != NULL && buffer_len > 0u) {
+    buffer[0] = '\0';
+  }
+}
+
+static bool component_has_attribution(
+    const lcc_state_component_attribution_t *component) {
+  return component != NULL &&
+         (has_text(component->source) || has_text(component->freshness));
+}
+
+static void merge_text(char *buffer, size_t buffer_len, const char *value,
+                       const char *mixed_value) {
+  if (buffer == NULL || buffer_len == 0u || !has_text(value) ||
+      !has_text(mixed_value)) {
+    return;
+  }
+
+  if (!has_text(buffer)) {
+    (void)lcc_backend_copy_text(buffer, buffer_len, value);
+    return;
+  }
+  if (strcmp(buffer, value) == 0) {
+    return;
+  }
+
+  clear_text(buffer, buffer_len);
+  (void)lcc_backend_copy_text(buffer, buffer_len, mixed_value);
+}
+
+static lcc_state_component_attribution_t *power_field_component(
+    lcc_effective_state_metadata_t *effective_meta,
+    lcc_power_field_kind_t field_kind) {
+  if (effective_meta == NULL) {
+    return NULL;
+  }
+
+  switch (field_kind) {
+    case LCC_POWER_FIELD_PL1:
+      return &effective_meta->power_fields.pl1;
+    case LCC_POWER_FIELD_PL2:
+      return &effective_meta->power_fields.pl2;
+    case LCC_POWER_FIELD_PL4:
+      return &effective_meta->power_fields.pl4;
+    case LCC_POWER_FIELD_TCC_OFFSET:
+      return &effective_meta->power_fields.tcc_offset;
+  }
+
+  return NULL;
+}
+
+static const lcc_state_component_attribution_t *power_field_component_const(
+    const lcc_effective_state_metadata_t *effective_meta,
+    lcc_power_field_kind_t field_kind) {
+  if (effective_meta == NULL) {
+    return NULL;
+  }
+
+  switch (field_kind) {
+    case LCC_POWER_FIELD_PL1:
+      return &effective_meta->power_fields.pl1;
+    case LCC_POWER_FIELD_PL2:
+      return &effective_meta->power_fields.pl2;
+    case LCC_POWER_FIELD_PL4:
+      return &effective_meta->power_fields.pl4;
+    case LCC_POWER_FIELD_TCC_OFFSET:
+      return &effective_meta->power_fields.tcc_offset;
+  }
+
+  return NULL;
 }
 
 void lcc_backend_execution_clear(lcc_execution_snapshot_t *execution) {
@@ -114,6 +191,215 @@ lcc_status_t lcc_backend_state_set_metadata(
   }
 
   return LCC_OK;
+}
+
+void lcc_backend_effective_meta_clear(
+    lcc_effective_state_metadata_t *effective_meta) {
+  if (effective_meta != NULL) {
+    memset(effective_meta, 0, sizeof(*effective_meta));
+  }
+}
+
+void lcc_backend_effective_power_clear(
+    lcc_effective_state_metadata_t *effective_meta) {
+  if (effective_meta == NULL) {
+    return;
+  }
+
+  memset(&effective_meta->power, 0, sizeof(effective_meta->power));
+  memset(&effective_meta->power_fields, 0, sizeof(effective_meta->power_fields));
+}
+
+lcc_state_component_attribution_t *lcc_backend_effective_power_field(
+    lcc_effective_state_metadata_t *effective_meta,
+    lcc_power_field_kind_t field_kind) {
+  return power_field_component(effective_meta, field_kind);
+}
+
+const lcc_state_component_attribution_t *lcc_backend_effective_power_field_const(
+    const lcc_effective_state_metadata_t *effective_meta,
+    lcc_power_field_kind_t field_kind) {
+  return power_field_component_const(effective_meta, field_kind);
+}
+
+lcc_status_t lcc_backend_effective_component_set(
+    lcc_state_component_attribution_t *component, const char *source,
+    const char *freshness) {
+  if (component == NULL) {
+    return LCC_ERR_INVALID_ARGUMENT;
+  }
+
+  memset(component, 0, sizeof(*component));
+  if (has_text(source) &&
+      lcc_backend_copy_text(component->source, sizeof(component->source),
+                            source) != LCC_OK) {
+    return LCC_ERR_BUFFER_TOO_SMALL;
+  }
+  if (has_text(freshness) &&
+      lcc_backend_copy_text(component->freshness,
+                            sizeof(component->freshness),
+                            freshness) != LCC_OK) {
+    return LCC_ERR_BUFFER_TOO_SMALL;
+  }
+
+  return LCC_OK;
+}
+
+lcc_status_t lcc_backend_effective_power_field_set(
+    lcc_effective_state_metadata_t *effective_meta,
+    lcc_power_field_kind_t field_kind, const char *source,
+    const char *freshness) {
+  return lcc_backend_effective_component_set(
+      power_field_component(effective_meta, field_kind), source, freshness);
+}
+
+lcc_status_t lcc_backend_effective_component_merge(
+    lcc_state_component_attribution_t *component, const char *source,
+    const char *freshness) {
+  if (component == NULL) {
+    return LCC_ERR_INVALID_ARGUMENT;
+  }
+
+  merge_text(component->source, sizeof(component->source), source, "mixed");
+  merge_text(component->freshness, sizeof(component->freshness), freshness,
+             "mixed");
+  return LCC_OK;
+}
+
+lcc_status_t lcc_backend_effective_power_field_merge(
+    lcc_effective_state_metadata_t *effective_meta,
+    lcc_power_field_kind_t field_kind, const char *source,
+    const char *freshness) {
+  return lcc_backend_effective_component_merge(
+      power_field_component(effective_meta, field_kind), source, freshness);
+}
+
+void lcc_backend_effective_power_set_from_limits(
+    lcc_effective_state_metadata_t *effective_meta,
+    const lcc_power_limits_t *limits, const char *source,
+    const char *freshness) {
+  if (effective_meta == NULL) {
+    return;
+  }
+
+  lcc_backend_effective_power_clear(effective_meta);
+  if (limits == NULL) {
+    return;
+  }
+
+  if (limits->pl1.present) {
+    (void)lcc_backend_effective_power_field_set(effective_meta,
+                                                LCC_POWER_FIELD_PL1, source,
+                                                freshness);
+  }
+  if (limits->pl2.present) {
+    (void)lcc_backend_effective_power_field_set(effective_meta,
+                                                LCC_POWER_FIELD_PL2, source,
+                                                freshness);
+  }
+  if (limits->pl4.present) {
+    (void)lcc_backend_effective_power_field_set(effective_meta,
+                                                LCC_POWER_FIELD_PL4, source,
+                                                freshness);
+  }
+  if (limits->tcc_offset.present) {
+    (void)lcc_backend_effective_power_field_set(
+        effective_meta, LCC_POWER_FIELD_TCC_OFFSET, source, freshness);
+  }
+}
+
+void lcc_backend_effective_meta_finalize(
+    lcc_effective_state_metadata_t *effective_meta) {
+  lcc_state_component_attribution_t power_snapshot;
+  const lcc_power_field_kind_t power_fields[] = {
+      LCC_POWER_FIELD_PL1, LCC_POWER_FIELD_PL2, LCC_POWER_FIELD_PL4,
+      LCC_POWER_FIELD_TCC_OFFSET};
+  const lcc_state_component_attribution_t *field_component = NULL;
+  bool has_power_field_attribution = false;
+  size_t index = 0;
+
+  if (effective_meta == NULL) {
+    return;
+  }
+
+  power_snapshot = effective_meta->power;
+  clear_text(effective_meta->power.source, sizeof(effective_meta->power.source));
+  clear_text(effective_meta->power.freshness,
+             sizeof(effective_meta->power.freshness));
+  for (index = 0; index < sizeof(power_fields) / sizeof(power_fields[0]);
+       ++index) {
+    field_component =
+        power_field_component_const(effective_meta, power_fields[index]);
+    if (!component_has_attribution(field_component)) {
+      continue;
+    }
+
+    has_power_field_attribution = true;
+    merge_text(effective_meta->power.source, sizeof(effective_meta->power.source),
+               field_component->source, "mixed");
+    merge_text(effective_meta->power.freshness,
+               sizeof(effective_meta->power.freshness),
+               field_component->freshness, "mixed");
+  }
+  if (!has_power_field_attribution) {
+    effective_meta->power = power_snapshot;
+  }
+
+  clear_text(effective_meta->source, sizeof(effective_meta->source));
+  clear_text(effective_meta->freshness, sizeof(effective_meta->freshness));
+
+  merge_text(effective_meta->source, sizeof(effective_meta->source),
+             effective_meta->profile.source, "mixed");
+  merge_text(effective_meta->source, sizeof(effective_meta->source),
+             effective_meta->fan_table.source, "mixed");
+  merge_text(effective_meta->source, sizeof(effective_meta->source),
+             effective_meta->power.source, "mixed");
+  merge_text(effective_meta->source, sizeof(effective_meta->source),
+             effective_meta->thermal.source, "mixed");
+
+  merge_text(effective_meta->freshness, sizeof(effective_meta->freshness),
+             effective_meta->profile.freshness, "mixed");
+  merge_text(effective_meta->freshness, sizeof(effective_meta->freshness),
+             effective_meta->fan_table.freshness, "mixed");
+  merge_text(effective_meta->freshness, sizeof(effective_meta->freshness),
+             effective_meta->power.freshness, "mixed");
+  merge_text(effective_meta->freshness, sizeof(effective_meta->freshness),
+             effective_meta->thermal.freshness, "mixed");
+}
+
+void lcc_backend_state_finalize_effective_meta(lcc_state_snapshot_t *state) {
+  if (state != NULL) {
+    lcc_backend_effective_meta_finalize(&state->effective_meta);
+  }
+}
+
+void lcc_backend_state_mark_effective_cached(lcc_state_snapshot_t *state) {
+  bool has_thermal = false;
+
+  if (state == NULL) {
+    return;
+  }
+
+  has_thermal = state->thermal.has_cpu_temp_c || state->thermal.has_gpu_temp_c ||
+                state->thermal.has_cpu_fan_rpm ||
+                state->thermal.has_gpu_fan_rpm;
+
+  (void)lcc_backend_effective_component_set(
+      &state->effective_meta.profile,
+      state->effective.profile[0] != '\0' ? "cache" : NULL,
+      state->effective.profile[0] != '\0' ? "cache" : NULL);
+  (void)lcc_backend_effective_component_set(
+      &state->effective_meta.fan_table,
+      state->effective.fan_table[0] != '\0' ? "cache" : NULL,
+      state->effective.fan_table[0] != '\0' ? "cache" : NULL);
+  lcc_backend_effective_power_set_from_limits(
+      &state->effective_meta,
+      state->effective.has_power_limits ? &state->effective.power_limits : NULL,
+      "cache", "cache");
+  (void)lcc_backend_effective_component_set(
+      &state->effective_meta.thermal, has_thermal ? "cache" : NULL,
+      has_thermal ? "cache" : NULL);
+  lcc_backend_effective_meta_finalize(&state->effective_meta);
 }
 
 void lcc_backend_result_reset(lcc_backend_result_t *result) {

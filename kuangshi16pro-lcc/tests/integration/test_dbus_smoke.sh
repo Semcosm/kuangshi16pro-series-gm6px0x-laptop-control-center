@@ -130,8 +130,9 @@ start_daemon /tmp/lccd-mixed.log \
 mixed_state="$("$PROJECT_DIR/build/lccctl" state --user-bus)"
 printf '%s\n' "$mixed_state" | grep -q '"backend":"standard"'
 printf '%s\n' "$mixed_state" | grep -q '"backend_selected":"standard"'
-printf '%s\n' "$mixed_state" | grep -q '"apply_power_limits":"amw0"'
-printf '%s\n' "$mixed_state" | grep -q '"last_apply_backend":"amw0"'
+printf '%s\n' "$mixed_state" | grep -q '"apply_power_limits":"standard"'
+printf '%s\n' "$mixed_state" | grep -q '"last_apply_backend":"standard"'
+printf '%s\n' "$mixed_state" | grep -q '"last_apply_stage":"verify-powercap"'
 printf '%s\n' "$mixed_state" | grep -q '"pl1":75'
 printf '%s\n' "$mixed_state" | grep -q '"pl2":130'
 EOF

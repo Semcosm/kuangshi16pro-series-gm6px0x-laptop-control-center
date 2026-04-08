@@ -1,4 +1,5 @@
-# dry-run keeps converged routing but forces amw0 writes into dry-run mode.
+# dry-run still forces amw0 write paths into dry-run mode, but PL1/PL2 now
+# route through standard powercap and therefore remain real hardware writes.
 
 01-state-initial.command_exit_code=0
 01-state-initial.state_capture=ok
@@ -8,7 +9,7 @@
 01-state-initial.execution_read_state=standard
 01-state-initial.execution_apply_profile=standard|amw0
 01-state-initial.execution_apply_mode=standard|amw0
-01-state-initial.execution_apply_power_limits=amw0
+01-state-initial.execution_apply_power_limits=standard
 01-state-initial.execution_apply_fan_table=amw0
 
 02-capabilities.command_exit_code=0
@@ -58,8 +59,8 @@
 07-power-set.state_contract=ok
 07-power-set.backend=standard
 07-power-set.backend_selected=standard
-07-power-set.last_apply_stage=write-pl2
-07-power-set.last_apply_backend=amw0
+07-power-set.last_apply_stage=verify-powercap
+07-power-set.last_apply_backend=standard
 07-power-set.last_apply_error=none
 
 08-state-after-power.command_exit_code=0
@@ -67,8 +68,8 @@
 08-state-after-power.state_contract=ok
 08-state-after-power.backend=standard
 08-state-after-power.backend_selected=standard
-08-state-after-power.last_apply_stage=write-pl2
-08-state-after-power.last_apply_backend=amw0
+08-state-after-power.last_apply_stage=verify-powercap
+08-state-after-power.last_apply_backend=standard
 08-state-after-power.last_apply_error=none
 
 09-fan-apply.command_exit_code=0

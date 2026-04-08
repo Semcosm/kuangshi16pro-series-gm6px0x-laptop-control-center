@@ -106,6 +106,7 @@ lcc_hw_collect_missing_state_keys() {
     backend
     backend_selected
     backend_fallback_reason
+    effective_meta
     last_apply_stage
     last_apply_error
     last_apply_backend
@@ -284,6 +285,10 @@ lcc_hw_write_summary() {
       "$(lcc_hw_json_get "$state_file" "backend_selected")"
     printf 'backend_fallback_reason=%s\n' \
       "$(lcc_hw_json_get "$state_file" "backend_fallback_reason")"
+    printf 'effective_source=%s\n' \
+      "$(lcc_hw_json_get_object_key "$state_file" "effective_meta" "source")"
+    printf 'effective_refresh=%s\n' \
+      "$(lcc_hw_json_get_object_key "$state_file" "effective_meta" "freshness")"
     printf 'execution_read_state=%s\n' \
       "$(lcc_hw_json_get_object_key "$state_file" "execution" "read_state")"
     printf 'execution_apply_profile=%s\n' \
@@ -302,6 +307,8 @@ lcc_hw_write_summary() {
       "$(lcc_hw_json_get "$state_file" "last_apply_error")"
     printf 'last_apply_backend=%s\n' \
       "$(lcc_hw_json_get "$state_file" "last_apply_backend")"
+    printf 'last_apply_hardware_write=%s\n' \
+      "$(lcc_hw_json_get "$state_file" "last_apply_hardware_write")"
     printf 'transaction_state=%s\n' \
       "$(lcc_hw_json_get_object_key "$state_file" "transaction" "state")"
     printf 'transaction_operation=%s\n' \

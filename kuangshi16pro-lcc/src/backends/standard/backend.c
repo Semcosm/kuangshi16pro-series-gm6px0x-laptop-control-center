@@ -25,6 +25,7 @@ static lcc_status_t standard_probe(void *ctx,
   bool thermal_available = false;
   bool platform_profile_available = false;
   bool powercap_available = false;
+  bool powercap_writable = false;
   lcc_status_t status = LCC_OK;
 
   if (standard == NULL || capabilities == NULL) {
@@ -55,6 +56,12 @@ static lcc_status_t standard_probe(void *ctx,
   if (status != LCC_OK && status != LCC_ERR_NOT_FOUND) {
     return status;
   }
+  if (powercap_available) {
+    status = lcc_standard_powercap_can_write(standard, &powercap_writable);
+    if (status != LCC_OK && status != LCC_ERR_NOT_FOUND) {
+      return status;
+    }
+  }
 
   capabilities->can_read_state =
       hwmon_available || thermal_available || platform_profile_available ||
@@ -63,7 +70,7 @@ static lcc_status_t standard_probe(void *ctx,
   capabilities->has_powercap = powercap_available;
   capabilities->can_apply_mode = platform_profile_available;
   capabilities->can_apply_profile = platform_profile_available;
-  capabilities->can_apply_power_limits = false;
+  capabilities->can_apply_power_limits = powercap_writable;
   capabilities->can_apply_fan_table = false;
   capabilities->needs_reboot_for_mux = false;
 
@@ -108,11 +115,15 @@ static lcc_status_t standard_read_state(void *ctx, lcc_state_snapshot_t *state,
                   "system-default");
   (void)copy_name(state->effective.fan_table, sizeof(state->effective.fan_table),
                   "system-default");
+  (void)lcc_backend_effective_component_set(&state->effective_meta.fan_table,
+                                            "cache", "cache");
 
   lcc_backend_result_set_stage(result, "read-platform-profile");
   status = lcc_standard_platform_profile_read(standard, state);
   if (status == LCC_OK) {
     any_read = true;
+    (void)lcc_backend_effective_component_set(&state->effective_meta.profile,
+                                              "standard", "live");
   } else if (status != LCC_ERR_NOT_FOUND && status != LCC_ERR_NOT_SUPPORTED) {
     return status;
   }
@@ -121,6 +132,8 @@ static lcc_status_t standard_read_state(void *ctx, lcc_state_snapshot_t *state,
   status = lcc_standard_hwmon_read(standard, state);
   if (status == LCC_OK) {
     any_read = true;
+    (void)lcc_backend_effective_component_merge(&state->effective_meta.thermal,
+                                                "standard", "live");
   } else if (status != LCC_ERR_NOT_FOUND && status != LCC_ERR_NOT_SUPPORTED) {
     return status;
   }
@@ -129,6 +142,8 @@ static lcc_status_t standard_read_state(void *ctx, lcc_state_snapshot_t *state,
   status = lcc_standard_thermal_read(standard, state);
   if (status == LCC_OK) {
     any_read = true;
+    (void)lcc_backend_effective_component_merge(&state->effective_meta.thermal,
+                                                "standard", "live");
   } else if (status != LCC_ERR_NOT_FOUND && status != LCC_ERR_NOT_SUPPORTED) {
     return status;
   }
@@ -137,6 +152,9 @@ static lcc_status_t standard_read_state(void *ctx, lcc_state_snapshot_t *state,
   status = lcc_standard_powercap_read(standard, state);
   if (status == LCC_OK) {
     any_read = true;
+    lcc_backend_effective_power_set_from_limits(&state->effective_meta,
+                                                &state->effective.power_limits,
+                                                "standard", "live");
   } else if (status != LCC_ERR_NOT_FOUND && status != LCC_ERR_NOT_SUPPORTED) {
     return status;
   }
@@ -147,6 +165,7 @@ static lcc_status_t standard_read_state(void *ctx, lcc_state_snapshot_t *state,
     return LCC_ERR_NOT_FOUND;
   }
 
+  lcc_backend_state_finalize_effective_meta(state);
   return LCC_OK;
 }
 
@@ -169,13 +188,12 @@ static lcc_status_t standard_apply_mode(void *ctx, lcc_operating_mode_t mode,
 static lcc_status_t standard_apply_power_limits(void *ctx,
                                                 const lcc_power_limits_t *limits,
                                                 lcc_backend_result_t *result) {
-  (void)ctx;
-  (void)limits;
+  const lcc_standard_backend_t *standard = ctx;
+
   lcc_backend_result_reset(result);
   lcc_backend_result_set_executor(result, "standard");
-  lcc_backend_result_set_stage(result, "write-platform-profile");
-  lcc_backend_result_set_detail(result, "standard backend does not support power limit writes");
-  return LCC_ERR_NOT_SUPPORTED;
+  lcc_backend_result_set_stage(result, "write-powercap");
+  return lcc_standard_powercap_apply(standard, limits, result);
 }
 
 static lcc_status_t standard_apply_fan_table(void *ctx, const char *table_name,

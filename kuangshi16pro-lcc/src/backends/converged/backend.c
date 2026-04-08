@@ -110,16 +110,81 @@ static void set_fallback_detail(lcc_backend_result_t *result,
   lcc_backend_result_set_detail(result, detail);
 }
 
-static void merge_optional_byte(lcc_optional_byte_t *target,
-                                lcc_optional_byte_t source) {
-  if (target != NULL && source.present) {
-    *target = source;
+static bool has_component_attribution(
+    const lcc_state_component_attribution_t *component) {
+  return component != NULL &&
+         (component->source[0] != '\0' || component->freshness[0] != '\0');
+}
+
+static bool power_limits_any_present(const lcc_power_limits_t *limits) {
+  return limits != NULL &&
+         (limits->pl1.present || limits->pl2.present || limits->pl4.present ||
+          limits->tcc_offset.present);
+}
+
+static void replace_component_attribution(
+    lcc_state_component_attribution_t *target,
+    const lcc_state_component_attribution_t *source) {
+  if (target == NULL || source == NULL) {
+    return;
   }
+
+  *target = *source;
+}
+
+static void merge_component_attribution(
+    lcc_state_component_attribution_t *target,
+    const lcc_state_component_attribution_t *source) {
+  if (target == NULL || source == NULL) {
+    return;
+  }
+
+  (void)lcc_backend_effective_component_merge(target, source->source,
+                                              source->freshness);
+}
+
+static void overlay_power_field(
+    lcc_optional_byte_t *requested_target, lcc_optional_byte_t requested_source,
+    lcc_optional_byte_t *effective_target, lcc_optional_byte_t effective_source,
+    lcc_effective_state_metadata_t *target_meta,
+    const lcc_effective_state_metadata_t *source_meta,
+    lcc_power_field_kind_t field_kind, bool replace_existing) {
+  lcc_state_component_attribution_t *target_component = NULL;
+  const lcc_state_component_attribution_t *source_component = NULL;
+
+  if (effective_target == NULL || target_meta == NULL || source_meta == NULL) {
+    return;
+  }
+
+  if (requested_target != NULL && requested_source.present &&
+      (replace_existing || !requested_target->present)) {
+    *requested_target = requested_source;
+  }
+  if (!effective_source.present) {
+    return;
+  }
+  if (!replace_existing && effective_target->present) {
+    return;
+  }
+
+  *effective_target = effective_source;
+  target_component =
+      lcc_backend_effective_power_field(target_meta, field_kind);
+  source_component =
+      lcc_backend_effective_power_field_const(source_meta, field_kind);
+  if (target_component == NULL || !has_component_attribution(source_component)) {
+    return;
+  }
+
+  *target_component = *source_component;
 }
 
 static void overlay_amw0_state(lcc_state_snapshot_t *state,
                                const lcc_state_snapshot_t *amw0_state,
                                const lcc_converged_backend_t *converged) {
+  const bool replace_power =
+      strcmp(converged->execution.apply_power_limits, "amw0") == 0;
+
   if (state == NULL || amw0_state == NULL || converged == NULL) {
     return;
   }
@@ -133,6 +198,8 @@ static void overlay_amw0_state(lcc_state_snapshot_t *state,
     (void)lcc_backend_copy_text(state->effective.profile,
                                 sizeof(state->effective.profile),
                                 amw0_state->effective.profile);
+    replace_component_attribution(&state->effective_meta.profile,
+                                  &amw0_state->effective_meta.profile);
   }
   if (strcmp(converged->execution.apply_fan_table, "amw0") == 0) {
     (void)lcc_backend_copy_text(state->requested.fan_table,
@@ -141,27 +208,38 @@ static void overlay_amw0_state(lcc_state_snapshot_t *state,
     (void)lcc_backend_copy_text(state->effective.fan_table,
                                 sizeof(state->effective.fan_table),
                                 amw0_state->effective.fan_table);
+    replace_component_attribution(&state->effective_meta.fan_table,
+                                  &amw0_state->effective_meta.fan_table);
   }
-  if (strcmp(converged->execution.apply_power_limits, "amw0") == 0 &&
-      amw0_state->effective.has_power_limits) {
-    state->requested.has_power_limits = amw0_state->requested.has_power_limits;
-    state->effective.has_power_limits = amw0_state->effective.has_power_limits;
-    merge_optional_byte(&state->requested.power_limits.pl1,
-                        amw0_state->requested.power_limits.pl1);
-    merge_optional_byte(&state->requested.power_limits.pl2,
-                        amw0_state->requested.power_limits.pl2);
-    merge_optional_byte(&state->requested.power_limits.pl4,
-                        amw0_state->requested.power_limits.pl4);
-    merge_optional_byte(&state->requested.power_limits.tcc_offset,
-                        amw0_state->requested.power_limits.tcc_offset);
-    merge_optional_byte(&state->effective.power_limits.pl1,
-                        amw0_state->effective.power_limits.pl1);
-    merge_optional_byte(&state->effective.power_limits.pl2,
-                        amw0_state->effective.power_limits.pl2);
-    merge_optional_byte(&state->effective.power_limits.pl4,
-                        amw0_state->effective.power_limits.pl4);
-    merge_optional_byte(&state->effective.power_limits.tcc_offset,
-                        amw0_state->effective.power_limits.tcc_offset);
+  if (amw0_state->effective.has_power_limits) {
+    overlay_power_field(&state->requested.power_limits.pl1,
+                        amw0_state->requested.power_limits.pl1,
+                        &state->effective.power_limits.pl1,
+                        amw0_state->effective.power_limits.pl1,
+                        &state->effective_meta, &amw0_state->effective_meta,
+                        LCC_POWER_FIELD_PL1, replace_power);
+    overlay_power_field(&state->requested.power_limits.pl2,
+                        amw0_state->requested.power_limits.pl2,
+                        &state->effective.power_limits.pl2,
+                        amw0_state->effective.power_limits.pl2,
+                        &state->effective_meta, &amw0_state->effective_meta,
+                        LCC_POWER_FIELD_PL2, replace_power);
+    overlay_power_field(&state->requested.power_limits.pl4,
+                        amw0_state->requested.power_limits.pl4,
+                        &state->effective.power_limits.pl4,
+                        amw0_state->effective.power_limits.pl4,
+                        &state->effective_meta, &amw0_state->effective_meta,
+                        LCC_POWER_FIELD_PL4, replace_power);
+    overlay_power_field(&state->requested.power_limits.tcc_offset,
+                        amw0_state->requested.power_limits.tcc_offset,
+                        &state->effective.power_limits.tcc_offset,
+                        amw0_state->effective.power_limits.tcc_offset,
+                        &state->effective_meta, &amw0_state->effective_meta,
+                        LCC_POWER_FIELD_TCC_OFFSET, replace_power);
+    state->requested.has_power_limits =
+        power_limits_any_present(&state->requested.power_limits);
+    state->effective.has_power_limits =
+        power_limits_any_present(&state->effective.power_limits);
   }
 
   if (!state->thermal.has_cpu_temp_c && amw0_state->thermal.has_cpu_temp_c) {
@@ -180,6 +258,12 @@ static void overlay_amw0_state(lcc_state_snapshot_t *state,
     state->thermal.has_gpu_fan_rpm = true;
     state->thermal.gpu_fan_rpm = amw0_state->thermal.gpu_fan_rpm;
   }
+  if (amw0_state->effective_meta.thermal.source[0] != '\0' ||
+      amw0_state->effective_meta.thermal.freshness[0] != '\0') {
+    merge_component_attribution(&state->effective_meta.thermal,
+                                &amw0_state->effective_meta.thermal);
+  }
+  lcc_backend_state_finalize_effective_meta(state);
 }
 
 static void append_operation(char *buffer, size_t buffer_len, bool *first,

@@ -49,6 +49,9 @@ Current transport shape:
   `transaction`
 - `GetCapabilities` returns the model capability JSON
 - `SetPowerLimits` uses presence flags so clients can perform partial updates
+- field-level `GetState` semantics, especially `power` nullability,
+  `effective_meta` attribution including `effective_meta.components.power.fields`,
+  and `last_apply_*` diagnostics, are defined in `docs/state-contract.md`
 
 Non-stable or future-facing APIs such as thermal detail, MUX, or dGPU
 direct-connect should stay out of the stable v1 surface until their semantics
