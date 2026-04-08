@@ -45,6 +45,11 @@ UI comes later.
   daemon, not ad hoc build-tree paths
 - keep extending product-facing service behavior and validation around the
   installed daemon path while reverse work continues
+- treat `PL1` / `PL2` and `TccOffset` as the currently hardware-proven power
+  controls on this machine; keep `PL4` in the product surface, but do not claim
+  Intel-telemetry equivalence until it is independently validated
+- prioritize the fan chain next: stronger RPM discovery, write-path validation,
+  and clearer `effective_meta` semantics around fan-table state
 
 ## Reverse Priorities
 

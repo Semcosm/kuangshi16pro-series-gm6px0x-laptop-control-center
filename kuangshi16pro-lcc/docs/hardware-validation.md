@@ -215,6 +215,16 @@ Interpretation rules:
   field-level attribution in `effective_meta.components.power.fields` over the
   parent `power.source`
 
+Current evidence boundary:
+
+- `PL1` and `PL2` are hardware-proven on this machine when `turbostat`,
+  `intel-rapl:0`, and `MSR_PKG_POWER_LIMIT` all agree under load
+- `TCC offset` is hardware-proven when `MSR_IA32_TEMPERATURE_TARGET` shows the
+  expected offset
+- `PL4` is not yet fully hardware-proven through standard Intel telemetry on
+  this machine; treat it as a vendor-path value with clear state attribution,
+  not as a fully validated equivalent of Intel `PKG Limit #4`
+
 ## Runner Usage
 
 Default run:
