@@ -207,6 +207,10 @@ Interpretation rules:
 - if `lccctl power set ...` changes daemon state but not `powercap.diff`, then
   the write path and Linux `powercap` are reporting different semantics and
   should not be conflated
+- if `pl1/pl2` change while `pl4` or `tcc_offset` come from cache or `amw0`,
+  treat that as an intentional split path rather than a state mismatch; confirm
+  it through `last_apply_backend=mixed` and
+  `effective_meta.components.power.fields`
 - if only one field, such as `tcc_offset`, changes in `state.diff`, prefer the
   field-level attribution in `effective_meta.components.power.fields` over the
   parent `power.source`

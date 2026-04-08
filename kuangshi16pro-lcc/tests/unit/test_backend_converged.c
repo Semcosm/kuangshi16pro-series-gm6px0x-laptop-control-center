@@ -229,6 +229,60 @@ void lcc_run_backend_converged_tests(void) {
   assert(strcmp(state.effective_meta.power_fields.pl2.source, "standard") == 0);
   assert(state.effective_meta.power_fields.tcc_offset.source[0] == '\0');
 
+  memset(&limits, 0, sizeof(limits));
+  limits.pl1.present = true;
+  limits.pl1.value = 60u;
+  limits.pl2.present = true;
+  limits.pl2.value = 110u;
+  limits.pl4.present = true;
+  limits.pl4.value = 140u;
+  limits.tcc_offset.present = true;
+  limits.tcc_offset.value = 5u;
+  assert(lcc_backend_apply_power_limits(&converged_handle, &limits, &result) ==
+         LCC_OK);
+  assert(strcmp(result.executor_backend, "mixed") == 0);
+  assert(result.hardware_write);
+  assert(strcmp(result.stage, "mixed-power-apply") == 0);
+  assert(strstr(result.detail, "standard_stage=verify-powercap") != NULL);
+  assert(strstr(result.detail, "amw0_stage=write-tcc-offset") != NULL);
+  (void)snprintf(path, sizeof(path),
+                 "%s/class/powercap/intel-rapl:0/constraint_0_power_limit_uw",
+                 root);
+  read_text_file(path, profile_value, sizeof(profile_value));
+  assert(strcmp(profile_value, "60000000\n") == 0);
+  (void)snprintf(path, sizeof(path),
+                 "%s/class/powercap/intel-rapl:0/constraint_1_power_limit_uw",
+                 root);
+  read_text_file(path, profile_value, sizeof(profile_value));
+  assert(strcmp(profile_value, "110000000\n") == 0);
+  (void)snprintf(path, sizeof(path),
+                 "%s/class/powercap/intel-rapl-mmio:0/constraint_1_power_limit_uw",
+                 root);
+  read_text_file(path, profile_value, sizeof(profile_value));
+  assert(strcmp(profile_value, "140000000\n") == 0);
+
+  memset(&state, 0, sizeof(state));
+  assert(lcc_backend_read_state(&converged_handle, &state, &result) == LCC_OK);
+  assert(state.effective.has_power_limits);
+  assert(state.effective.power_limits.pl1.present);
+  assert(state.effective.power_limits.pl1.value == 60u);
+  assert(state.effective.power_limits.pl2.present);
+  assert(state.effective.power_limits.pl2.value == 110u);
+  assert(state.effective.power_limits.pl4.present);
+  assert(state.effective.power_limits.pl4.value == 140u);
+  assert(state.effective.power_limits.tcc_offset.present);
+  assert(state.effective.power_limits.tcc_offset.value == 5u);
+  assert(strcmp(state.effective_meta.power.source, "mixed") == 0);
+  assert(strcmp(state.effective_meta.power.freshness, "mixed") == 0);
+  assert(strcmp(state.effective_meta.power_fields.pl1.source, "standard") == 0);
+  assert(strcmp(state.effective_meta.power_fields.pl2.source, "standard") == 0);
+  assert(strcmp(state.effective_meta.power_fields.pl4.source, "cache") == 0);
+  assert(strcmp(state.effective_meta.power_fields.pl4.freshness, "cache") == 0);
+  assert(strcmp(state.effective_meta.power_fields.tcc_offset.source, "cache") ==
+         0);
+  assert(strcmp(state.effective_meta.power_fields.tcc_offset.freshness,
+                "cache") == 0);
+
   assert(lcc_backend_apply_fan_table(&converged_handle, "M4T1", &result) ==
          LCC_OK);
   assert(strcmp(result.executor_backend, "amw0") == 0);

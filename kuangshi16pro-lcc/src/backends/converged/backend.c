@@ -76,6 +76,36 @@ static const char *route_backend_name(const lcc_backend_t *backend) {
   return backend != NULL ? lcc_backend_name(backend) : "";
 }
 
+static bool power_limits_has_standard_fields(const lcc_power_limits_t *limits) {
+  return limits != NULL && (limits->pl1.present || limits->pl2.present);
+}
+
+static bool power_limits_has_amw0_fields(const lcc_power_limits_t *limits) {
+  return limits != NULL && (limits->pl4.present || limits->tcc_offset.present);
+}
+
+static void power_limits_copy_subset(lcc_power_limits_t *target,
+                                     const lcc_power_limits_t *source,
+                                     bool include_standard_fields,
+                                     bool include_amw0_fields) {
+  if (target == NULL) {
+    return;
+  }
+
+  memset(target, 0, sizeof(*target));
+  if (source == NULL) {
+    return;
+  }
+  if (include_standard_fields) {
+    target->pl1 = source->pl1;
+    target->pl2 = source->pl2;
+  }
+  if (include_amw0_fields) {
+    target->pl4 = source->pl4;
+    target->tcc_offset = source->tcc_offset;
+  }
+}
+
 static void set_result_executor(lcc_backend_result_t *result,
                                 const lcc_backend_t *backend) {
   if (result == NULL || backend == NULL) {
@@ -106,6 +136,37 @@ static void set_fallback_detail(lcc_backend_result_t *result,
                    "%s stopped at %s because no fallback route is available after %s",
                    operation_name, lcc_backend_name(from_backend),
                    lcc_status_string(reason));
+  }
+  lcc_backend_result_set_detail(result, detail);
+}
+
+static void set_mixed_power_detail(lcc_backend_result_t *result,
+                                   const lcc_backend_result_t *standard_result,
+                                   const lcc_backend_result_t *amw0_result,
+                                   const char *suffix) {
+  char detail[LCC_STATE_REASON_MAX];
+  const char *standard_stage = NULL;
+  const char *amw0_stage = NULL;
+
+  if (result == NULL) {
+    return;
+  }
+
+  standard_stage = standard_result != NULL && standard_result->stage[0] != '\0'
+                       ? standard_result->stage
+                       : "none";
+  amw0_stage = amw0_result != NULL && amw0_result->stage[0] != '\0'
+                   ? amw0_result->stage
+                   : "none";
+
+  if (suffix != NULL && suffix[0] != '\0') {
+    (void)snprintf(detail, sizeof(detail),
+                   "standard_stage=%.48s amw0_stage=%.48s reason=%.56s",
+                   standard_stage, amw0_stage, suffix);
+  } else {
+    (void)snprintf(detail, sizeof(detail),
+                   "standard_stage=%.48s amw0_stage=%.48s", standard_stage,
+                   amw0_stage);
   }
   lcc_backend_result_set_detail(result, detail);
 }
@@ -575,10 +636,57 @@ static lcc_status_t converged_apply_power_limits(
   lcc_converged_backend_t *converged = ctx;
   const lcc_backend_t *primary_backend = NULL;
   const lcc_backend_t *secondary_backend = NULL;
+  lcc_backend_result_t standard_result;
+  lcc_backend_result_t amw0_result;
+  lcc_power_limits_t standard_limits;
+  lcc_power_limits_t amw0_limits;
+  const bool needs_standard = power_limits_has_standard_fields(limits);
+  const bool needs_amw0 = power_limits_has_amw0_fields(limits);
   lcc_status_t status = LCC_OK;
 
   if (converged == NULL || limits == NULL) {
     return LCC_ERR_INVALID_ARGUMENT;
+  }
+  if (!needs_standard && !needs_amw0) {
+    lcc_backend_result_reset(result);
+    lcc_backend_result_set_detail(
+        result, "power limit write requires at least one present field");
+    return LCC_ERR_INVALID_ARGUMENT;
+  }
+
+  if (needs_standard && needs_amw0 && converged->standard_available &&
+      converged->amw0_available &&
+      converged->standard_capabilities.can_apply_power_limits &&
+      converged->amw0_capabilities.can_apply_power_limits) {
+    power_limits_copy_subset(&standard_limits, limits, true, false);
+    power_limits_copy_subset(&amw0_limits, limits, false, true);
+    lcc_backend_result_reset(&standard_result);
+    lcc_backend_result_reset(&amw0_result);
+    lcc_backend_result_reset(result);
+
+    status = lcc_backend_apply_power_limits(converged->standard_backend,
+                                            &standard_limits, &standard_result);
+    if (status != LCC_OK) {
+      *result = standard_result;
+      set_result_executor(result, converged->standard_backend);
+      return status;
+    }
+
+    status = lcc_backend_apply_power_limits(converged->amw0_backend,
+                                            &amw0_limits, &amw0_result);
+    result->changed = standard_result.changed || amw0_result.changed;
+    result->hardware_write =
+        standard_result.hardware_write || amw0_result.hardware_write;
+    lcc_backend_result_set_executor(result, "mixed");
+    lcc_backend_result_set_stage(result, "mixed-power-apply");
+    if (status != LCC_OK) {
+      set_mixed_power_detail(result, &standard_result, &amw0_result,
+                             amw0_result.detail);
+      return status;
+    }
+
+    set_mixed_power_detail(result, &standard_result, &amw0_result, NULL);
+    return LCC_OK;
   }
 
   primary_backend =

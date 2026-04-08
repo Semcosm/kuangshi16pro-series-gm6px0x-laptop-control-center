@@ -167,6 +167,10 @@ Rules:
 - `true` means the backend reported a real hardware write
 - `false` means the backend reported no hardware write, for example dry-run or
   a write path that stopped before touching hardware
+- `last_apply_backend` may be `"mixed"` when one logical power write is split
+  across `standard` and `amw0`; in that case `last_apply_stage` reports the
+  converged orchestration stage and `effective_meta.components.power.fields`
+  stays authoritative for per-field attribution
 
 ## Legacy Compatibility Field
 

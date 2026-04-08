@@ -81,6 +81,9 @@ Current stable backend detail stages include:
 - `amw0`:
   `set-mode-index`, `set-mode-control`, `write-pl1`, `write-pl2`, `write-pl4`,
   `write-tcc-offset`, `custom-enable`, and the existing fan-plan stage labels
+- `converged`:
+  `mixed-power-apply` when one power-limit request is intentionally split across
+  `standard` and `amw0`
 
 ## Interpretation Rules
 
@@ -88,6 +91,11 @@ Current stable backend detail stages include:
 - `last_apply_backend` describes the last executor, not the global selection
 - `backend` may differ from `last_apply_backend` when a converged backend reads
   through `standard` but writes through `amw0`
+- `execution.apply_power_limits` is the primary route for power writes, not a
+  promise that every power-limit field is handled by a single backend
+- `last_apply_backend = "mixed"` means one mutating request was intentionally
+  split across multiple backend families; use `effective_meta.components.power`
+  and its field attribution to see which fields came from which backend
 - `effective_meta.source` tells you whether `effective` is explained by one
   backend family, by cache only, or by a marked mixed composition
 - `effective_meta.freshness` tells you whether `effective` came from live
