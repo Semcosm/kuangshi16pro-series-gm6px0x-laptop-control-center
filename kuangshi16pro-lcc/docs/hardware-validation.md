@@ -225,6 +225,72 @@ Current evidence boundary:
   this machine; treat it as a vendor-path value with clear state attribution,
   not as a fully validated equivalent of Intel `PKG Limit #4`
 
+## Fan Apply Audit
+
+When `fan apply` succeeds at the transport layer but fan behavior still feels
+unclear, capture one dedicated artifact set instead of relying on ad-hoc
+terminal history.
+
+Use:
+
+```bash
+kuangshi16pro-lcc/scripts/fan-apply-audit.sh snapshot
+
+kuangshi16pro-lcc/scripts/fan-apply-audit.sh around \
+  --watch 45 \
+  --file kuangshi16pro-lcc/data/fan-tables/fan-balanced.json \
+  -- stress-ng --cpu 16 --timeout 45s
+
+kuangshi16pro-lcc/scripts/fan-apply-audit.sh compare \
+  --watch 45 \
+  --file kuangshi16pro-lcc/data/fan-tables/fan-aggressive.json \
+  -- stress-ng --cpu 16 --timeout 45s
+```
+
+The script writes a timestamped directory under `/tmp` by default. In
+`around` mode it records:
+
+- `before/`, `after-apply/`, and `after-watch/` state snapshots
+- `apply.stdout`, `apply.stderr`, `apply.exit`
+- `apply-journal.log` and `watch-journal.log`
+- `watch.stdout` and `watch-summary.txt`
+- `state-after-apply.diff` and `state-after-watch.diff`
+
+In `compare` mode it additionally records:
+
+- `baseline-watch-summary.txt`
+- `custom-watch-summary.txt`
+- `compare-summary.txt`
+- `state-baseline.diff`
+
+Interpretation rules:
+
+- if `apply.exit` is zero and `state-after-apply.diff` shows
+  `last_apply_backend=amw0` plus the expected `fan_table` target, the product
+  fan write path succeeded
+- if `watch-summary.txt` shows `ffan_max` rising under load and then falling
+  after the load ends, that is behavioral evidence that the vendor fan path is
+  reacting
+- `vendor_fan_level` and `FFAN` are vendor fan activity levels, not RPM
+- if `cpu_fan_rpm` and `gpu_fan_rpm` remain `null` on this machine, that is
+  expected until a real RPM source is proven; do not substitute `FFAN`
+- if `watch-summary.txt` stays flat while `apply` succeeds, treat that as
+  "transport success without behavioral proof" and keep `fan_table` semantics
+  conservative
+- `compare` mode compares the current active fan behavior against the requested
+  table; it does not imply the baseline is `system-default`
+- when the active table may already be `fan-balanced`, prefer
+  `data/fan-tables/fan-aggressive.json` for compare mode so the A/B
+  window uses intentionally different fan curves
+
+The hardware smoke summary also records:
+
+- `thermal_cpu_temp_c`
+- `thermal_gpu_temp_c`
+- `thermal_cpu_fan_rpm`
+- `thermal_gpu_fan_rpm`
+- `thermal_vendor_fan_level`
+
 ## Runner Usage
 
 Default run:

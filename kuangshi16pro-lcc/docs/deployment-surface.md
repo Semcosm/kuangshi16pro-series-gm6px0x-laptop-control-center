@@ -20,6 +20,9 @@ Current product assets:
   system-bus policy for the stable v1 surface
 - `dbus/io.github.semcosm.Lcc1.policy`
   Polkit action definitions for mutating methods
+- `data/capabilities/*.json`, `data/fan-tables/*.json`, and `data/profiles/*.json`
+  installed product data used by backend capability detection, named fan-table
+  loads, and shipped profile defaults
 - `../LICENSE`
   project license installed with the package payload
 - `man/lccctl.1` and `man/lccd.8`
@@ -81,6 +84,12 @@ Current checked-in path assumptions:
   `/usr/share/dbus-1/system.d/io.github.semcosm.Lcc1.conf`
 - the Polkit policy is installed as
   `/usr/share/polkit-1/actions/io.github.semcosm.Lcc1.policy`
+- packaged runtime data is installed under
+  `/usr/share/kuangshi16pro-lcc/data`
+  including
+  `/usr/share/kuangshi16pro-lcc/data/capabilities`,
+  `/usr/share/kuangshi16pro-lcc/data/fan-tables`, and
+  `/usr/share/kuangshi16pro-lcc/data/profiles`
 - the package license is installed as
   `/usr/share/licenses/kuangshi16pro-lcc/LICENSE`
 - the packaged man pages are installed as
@@ -92,6 +101,7 @@ Makefile install productization:
 - staging installs use `DESTDIR`
 - install layout is parameterized through `PREFIX`, `BINDIR`, `LIBEXECDIR`,
   `SYSTEMDUNITDIR`, `DBUSSYSTEMSERVICEDIR`, `DBUSSYSTEMCONFDIR`, and
-  `POLKITACTIONSDIR`, `LICENSEDIR`, `MAN1DIR`, and `MAN8DIR`
+  `POLKITACTIONSDIR`, `DATADIR`, `CAPABILITIESDIR`, `FANTABLESDIR`,
+  `PROFILESDIR`, `LICENSEDIR`, `MAN1DIR`, and `MAN8DIR`
 - `make install-smoke` verifies staged install, rewritten `ExecStart`, and
   uninstall cleanup without touching the live system

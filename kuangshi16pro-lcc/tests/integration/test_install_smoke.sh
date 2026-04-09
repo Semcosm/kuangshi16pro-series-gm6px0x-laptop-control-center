@@ -15,6 +15,10 @@ polkitactionsdir="/usr/share/polkit-1/actions"
 licensedir="/usr/share/licenses/kuangshi16pro-lcc"
 man1dir="/usr/share/man/man1"
 man8dir="/usr/share/man/man8"
+datadir="$prefix/share/kuangshi16pro-lcc/data"
+capabilitiesdir="$datadir/capabilities"
+fantablesdir="$datadir/fan-tables"
+profilesdir="$datadir/profiles"
 
 cleanup() {
   rm -rf "$stage_root"
@@ -54,6 +58,11 @@ require_file "$stage_root$polkitactionsdir/io.github.semcosm.Lcc1.policy"
 require_file "$stage_root$licensedir/LICENSE"
 require_file "$stage_root$man1dir/lccctl.1"
 require_file "$stage_root$man8dir/lccd.8"
+require_file "$stage_root$capabilitiesdir/gm6px0x.json"
+require_file "$stage_root$fantablesdir/M4T1.json"
+require_file "$stage_root$fantablesdir/fan-balanced.json"
+require_file "$stage_root$fantablesdir/fan-aggressive.json"
+require_file "$stage_root$profilesdir/mode4_profile1.json"
 
 grep -Fq "ExecStart=$libexecdir/lccd --system" \
   "$stage_root$systemdunitdir/lccd.service"

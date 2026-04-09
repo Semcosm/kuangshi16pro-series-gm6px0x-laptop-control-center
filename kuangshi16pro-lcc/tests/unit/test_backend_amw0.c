@@ -220,6 +220,17 @@ static void test_amw0_transaction_dry_run_apply(void) {
   assert(strcmp(manager.state_cache.effective_meta.power.source, "cache") == 0);
   assert(strcmp(manager.state_cache.effective_meta.power_fields.pl1.source,
                 "cache") == 0);
+
+  memset(&request, 0, sizeof(request));
+  request.kind = LCC_TRANSACTION_FAN_TABLE;
+  request.input.fan_table_name = "M4T1";
+  assert(lcc_transaction_execute(&manager, &request) == LCC_OK);
+  assert(manager.state_cache.transaction.state == LCC_TRANSACTION_STATE_IDLE);
+  assert(strcmp(manager.state_cache.effective.fan_table, "M4T1") == 0);
+  assert(strcmp(manager.state_cache.effective.profile, "custom") == 0);
+  assert(manager.state_cache.last_apply.has_target);
+  assert(strcmp(manager.state_cache.last_apply.target.fan_table, "M4T1") == 0);
+  assert(strcmp(manager.state_cache.last_apply.target.profile, "custom") == 0);
 }
 
 static void test_amw0_transaction_fan_failure_stage(void) {

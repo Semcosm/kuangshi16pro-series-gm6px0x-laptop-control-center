@@ -1,0 +1,25 @@
+{
+  "name": "fan-aggressive",
+  "activated": true,
+  "fan_control_respective": true,
+  "cpu": [
+    {"id": 0, "up": 34, "down": 31, "duty": 35},
+    {"id": 1, "up": 38, "down": 35, "duty": 45},
+    {"id": 2, "up": 42, "down": 39, "duty": 55},
+    {"id": 3, "up": 46, "down": 43, "duty": 65},
+    {"id": 4, "up": 50, "down": 47, "duty": 75},
+    {"id": 5, "up": 54, "down": 51, "duty": 85},
+    {"id": 6, "up": 58, "down": 55, "duty": 93},
+    {"id": 7, "up": 62, "down": 59, "duty": 100}
+  ],
+  "gpu": [
+    {"id": 0, "up": 36, "down": 33, "duty": 36},
+    {"id": 1, "up": 40, "down": 37, "duty": 46},
+    {"id": 2, "up": 44, "down": 41, "duty": 56},
+    {"id": 3, "up": 48, "down": 45, "duty": 66},
+    {"id": 4, "up": 52, "down": 49, "duty": 76},
+    {"id": 5, "up": 56, "down": 53, "duty": 86},
+    {"id": 6, "up": 60, "down": 57, "duty": 94},
+    {"id": 7, "up": 64, "down": 61, "duty": 100}
+  ]
+}

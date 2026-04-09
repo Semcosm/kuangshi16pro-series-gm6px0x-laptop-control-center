@@ -98,6 +98,47 @@ lcc_hw_json_get_object_key() {
   printf '%s\n' "$value"
 }
 
+lcc_hw_json_get_effective_meta_key() {
+  local file="$1"
+  local key="$2"
+  local match=""
+  local value=""
+
+  if [[ ! -f "$file" ]]; then
+    printf 'none\n'
+    return 0
+  fi
+
+  case "$key" in
+    source)
+      match="$(grep -o "\"effective_meta\":{\"source\":\\(\"[^\"]*\"\\|null\\|true\\|false\\|[0-9][0-9]*\\)" \
+        "$file" | head -n 1 || true)"
+      ;;
+    freshness)
+      match="$(grep -o "\"effective_meta\":{\"source\":\\(\"[^\"]*\"\\|null\\|true\\|false\\|[0-9][0-9]*\\),\"freshness\":\\(\"[^\"]*\"\\|null\\|true\\|false\\|[0-9][0-9]*\\)" \
+        "$file" | head -n 1 || true)"
+      ;;
+    *)
+      printf 'missing\n'
+      return 0
+      ;;
+  esac
+
+  if [[ -z "$match" ]]; then
+    printf 'missing\n'
+    return 0
+  fi
+
+  value="${match##*:}"
+  value="${value#\"}"
+  value="${value%\"}"
+  if [[ -z "$value" || "$value" == "null" ]]; then
+    value="none"
+  fi
+
+  printf '%s\n' "$value"
+}
+
 lcc_hw_collect_missing_state_keys() {
   local file="$1"
   local missing=()
@@ -286,9 +327,9 @@ lcc_hw_write_summary() {
     printf 'backend_fallback_reason=%s\n' \
       "$(lcc_hw_json_get "$state_file" "backend_fallback_reason")"
     printf 'effective_source=%s\n' \
-      "$(lcc_hw_json_get_object_key "$state_file" "effective_meta" "source")"
+      "$(lcc_hw_json_get_effective_meta_key "$state_file" "source")"
     printf 'effective_refresh=%s\n' \
-      "$(lcc_hw_json_get_object_key "$state_file" "effective_meta" "freshness")"
+      "$(lcc_hw_json_get_effective_meta_key "$state_file" "freshness")"
     printf 'execution_read_state=%s\n' \
       "$(lcc_hw_json_get_object_key "$state_file" "execution" "read_state")"
     printf 'execution_apply_profile=%s\n' \
@@ -309,6 +350,16 @@ lcc_hw_write_summary() {
       "$(lcc_hw_json_get "$state_file" "last_apply_backend")"
     printf 'last_apply_hardware_write=%s\n' \
       "$(lcc_hw_json_get "$state_file" "last_apply_hardware_write")"
+    printf 'thermal_cpu_temp_c=%s\n' \
+      "$(lcc_hw_json_get_object_key "$state_file" "thermal" "cpu_temp_c")"
+    printf 'thermal_gpu_temp_c=%s\n' \
+      "$(lcc_hw_json_get_object_key "$state_file" "thermal" "gpu_temp_c")"
+    printf 'thermal_cpu_fan_rpm=%s\n' \
+      "$(lcc_hw_json_get_object_key "$state_file" "thermal" "cpu_fan_rpm")"
+    printf 'thermal_gpu_fan_rpm=%s\n' \
+      "$(lcc_hw_json_get_object_key "$state_file" "thermal" "gpu_fan_rpm")"
+    printf 'thermal_vendor_fan_level=%s\n' \
+      "$(lcc_hw_json_get_object_key "$state_file" "thermal" "vendor_fan_level")"
     printf 'transaction_state=%s\n' \
       "$(lcc_hw_json_get_object_key "$state_file" "transaction" "state")"
     printf 'transaction_operation=%s\n' \

@@ -7,7 +7,7 @@ source "$script_dir/lib.sh"
 
 project_dir="$(lcc_hw_project_dir)"
 lccctl_bin="$project_dir/build/lccctl"
-fixture_fan="$script_dir/fixtures/fan-balanced.json"
+fixture_fan="$project_dir/data/fan-tables/fan-balanced.json"
 service_name="lccd.service"
 matrix="${LCC_HW_MATRIX:-mixed}"
 keep_artifacts="${LCC_KEEP_ARTIFACTS:-1}"

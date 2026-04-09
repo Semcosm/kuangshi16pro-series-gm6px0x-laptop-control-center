@@ -44,6 +44,10 @@ LICENSEDIR ?= $(PREFIX)/share/licenses/kuangshi16pro-lcc
 MANDIR ?= $(PREFIX)/share/man
 MAN1DIR ?= $(MANDIR)/man1
 MAN8DIR ?= $(MANDIR)/man8
+DATADIR ?= $(PREFIX)/share/kuangshi16pro-lcc/data
+CAPABILITIESDIR ?= $(DATADIR)/capabilities
+FANTABLESDIR ?= $(DATADIR)/fan-tables
+PROFILESDIR ?= $(DATADIR)/profiles
 SYSTEMD_UNIT_SRC := systemd/lccd.service
 DBUS_SERVICE_SRC := systemd/dbus-io.github.semcosm.Lcc1.service
 DBUS_CONFIG_SRC := dbus/io.github.semcosm.Lcc1.conf
@@ -51,6 +55,12 @@ POLKIT_POLICY_SRC := dbus/io.github.semcosm.Lcc1.policy
 LICENSE_SRC := ../LICENSE
 LCCCTL_MAN_SRC := man/lccctl.1
 LCCD_MAN_SRC := man/lccd.8
+CAPABILITY_DATA_SRCS := $(wildcard data/capabilities/*)
+FAN_TABLE_DATA_SRCS := $(wildcard data/fan-tables/*)
+PROFILE_DATA_SRCS := $(wildcard data/profiles/*)
+INSTALLED_CAPABILITY_DATA := $(patsubst data/capabilities/%,$(DESTDIR)$(CAPABILITIESDIR)/%,$(CAPABILITY_DATA_SRCS))
+INSTALLED_FAN_TABLE_DATA := $(patsubst data/fan-tables/%,$(DESTDIR)$(FANTABLESDIR)/%,$(FAN_TABLE_DATA_SRCS))
+INSTALLED_PROFILE_DATA := $(patsubst data/profiles/%,$(DESTDIR)$(PROFILESDIR)/%,$(PROFILE_DATA_SRCS))
 
 COMMON_SRCS := \
 	$(SRC_DIR)/common/lcc_error.c \
@@ -169,6 +179,9 @@ install-assets:
 		"$(DESTDIR)$(DBUSSYSTEMSERVICEDIR)" \
 		"$(DESTDIR)$(DBUSSYSTEMCONFDIR)" \
 		"$(DESTDIR)$(POLKITACTIONSDIR)" \
+		"$(DESTDIR)$(CAPABILITIESDIR)" \
+		"$(DESTDIR)$(FANTABLESDIR)" \
+		"$(DESTDIR)$(PROFILESDIR)" \
 		"$(DESTDIR)$(LICENSEDIR)" \
 		"$(DESTDIR)$(MAN1DIR)" \
 		"$(DESTDIR)$(MAN8DIR)"
@@ -187,6 +200,15 @@ install-assets:
 		"$(DESTDIR)$(MAN1DIR)/lccctl.1"
 	$(INSTALL) -m 0644 "$(LCCD_MAN_SRC)" \
 		"$(DESTDIR)$(MAN8DIR)/lccd.8"
+	for file in $(CAPABILITY_DATA_SRCS); do \
+		$(INSTALL) -m 0644 "$$file" "$(DESTDIR)$(CAPABILITIESDIR)/$$(basename "$$file")"; \
+	done
+	for file in $(FAN_TABLE_DATA_SRCS); do \
+		$(INSTALL) -m 0644 "$$file" "$(DESTDIR)$(FANTABLESDIR)/$$(basename "$$file")"; \
+	done
+	for file in $(PROFILE_DATA_SRCS); do \
+		$(INSTALL) -m 0644 "$$file" "$(DESTDIR)$(PROFILESDIR)/$$(basename "$$file")"; \
+	done
 
 uninstall:
 	rm -f \
@@ -198,13 +220,19 @@ uninstall:
 		"$(DESTDIR)$(POLKITACTIONSDIR)/io.github.semcosm.Lcc1.policy" \
 		"$(DESTDIR)$(LICENSEDIR)/LICENSE" \
 		"$(DESTDIR)$(MAN1DIR)/lccctl.1" \
-		"$(DESTDIR)$(MAN8DIR)/lccd.8"
+		"$(DESTDIR)$(MAN8DIR)/lccd.8" \
+		$(INSTALLED_CAPABILITY_DATA) \
+		$(INSTALLED_FAN_TABLE_DATA) \
+		$(INSTALLED_PROFILE_DATA)
 	-rmdir -p --ignore-fail-on-non-empty "$(DESTDIR)$(LIBEXECDIR)"
 	-rmdir -p --ignore-fail-on-non-empty "$(DESTDIR)$(BINDIR)"
 	-rmdir -p --ignore-fail-on-non-empty "$(DESTDIR)$(SYSTEMDUNITDIR)"
 	-rmdir -p --ignore-fail-on-non-empty "$(DESTDIR)$(DBUSSYSTEMSERVICEDIR)"
 	-rmdir -p --ignore-fail-on-non-empty "$(DESTDIR)$(DBUSSYSTEMCONFDIR)"
 	-rmdir -p --ignore-fail-on-non-empty "$(DESTDIR)$(POLKITACTIONSDIR)"
+	-rmdir -p --ignore-fail-on-non-empty "$(DESTDIR)$(CAPABILITIESDIR)"
+	-rmdir -p --ignore-fail-on-non-empty "$(DESTDIR)$(FANTABLESDIR)"
+	-rmdir -p --ignore-fail-on-non-empty "$(DESTDIR)$(PROFILESDIR)"
 	-rmdir -p --ignore-fail-on-non-empty "$(DESTDIR)$(LICENSEDIR)"
 	-rmdir -p --ignore-fail-on-non-empty "$(DESTDIR)$(MAN1DIR)"
 	-rmdir -p --ignore-fail-on-non-empty "$(DESTDIR)$(MAN8DIR)"

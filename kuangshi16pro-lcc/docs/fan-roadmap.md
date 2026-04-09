@@ -190,6 +190,27 @@ Acceptance:
   write path succeeded but behavior unchanged
   write path succeeded and behavior changed
 
+Current status:
+
+- added `kuangshi16pro-lcc/scripts/fan-apply-audit.sh` to capture:
+  `fan apply` before/after state
+  journal deltas
+  FFAN watch windows
+  summarized vendor fan level evidence
+- added a `compare` mode so hardware validation can capture
+  current-table vs requested-table FFAN behavior under the same load window
+- added hardware-smoke summary fields for:
+  `thermal_cpu_temp_c`
+  `thermal_gpu_temp_c`
+  `thermal_cpu_fan_rpm`
+  `thermal_gpu_fan_rpm`
+  `thermal_vendor_fan_level`
+- still pending:
+  compare two intentionally different fan tables on the target machine, using
+  the file-based `data/fan-tables/fan-aggressive.json` path when the
+  current active table may already be `fan-balanced`, and pin the expected
+  behavioral delta in documentation
+
 ### Phase 5: Only then consider live fan-table readback
 
 If future reverse work reveals a reliable readback source for:
