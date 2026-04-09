@@ -126,12 +126,48 @@ static void init_fake_sysfs(char *root, size_t root_len) {
   write_text_file(path, "performance\n");
 }
 
+static void init_fake_sysfs_labeled(char *root, size_t root_len) {
+  char path[512];
+
+  init_fake_sysfs(root, root_len);
+
+  (void)snprintf(path, sizeof(path), "%s/class/hwmon/hwmon1", root);
+  make_dir(path);
+  (void)snprintf(path, sizeof(path), "%s/class/hwmon/hwmon2", root);
+  make_dir(path);
+
+  (void)snprintf(path, sizeof(path), "%s/class/hwmon/hwmon1/name", root);
+  write_text_file(path, "amdgpu\n");
+  (void)snprintf(path, sizeof(path), "%s/class/hwmon/hwmon1/temp1_input", root);
+  write_text_file(path, "67000\n");
+  (void)snprintf(path, sizeof(path), "%s/class/hwmon/hwmon1/temp1_label", root);
+  write_text_file(path, "edge\n");
+  (void)snprintf(path, sizeof(path), "%s/class/hwmon/hwmon1/fan1_input", root);
+  write_text_file(path, "3333\n");
+  (void)snprintf(path, sizeof(path), "%s/class/hwmon/hwmon1/fan1_label", root);
+  write_text_file(path, "GPU Fan\n");
+
+  (void)snprintf(path, sizeof(path), "%s/class/hwmon/hwmon2/name", root);
+  write_text_file(path, "coretemp\n");
+  (void)snprintf(path, sizeof(path), "%s/class/hwmon/hwmon2/temp3_input", root);
+  write_text_file(path, "62000\n");
+  (void)snprintf(path, sizeof(path), "%s/class/hwmon/hwmon2/temp3_label", root);
+  write_text_file(path, "Package id 0\n");
+  (void)snprintf(path, sizeof(path), "%s/class/hwmon/hwmon2/fan2_input", root);
+  write_text_file(path, "2888\n");
+  (void)snprintf(path, sizeof(path), "%s/class/hwmon/hwmon2/fan2_label", root);
+  write_text_file(path, "CPU Fan\n");
+}
+
 void lcc_run_backend_standard_tests(void) {
   char root[256];
+  char labeled_root[256];
   char path[512];
   char profile_value[64];
   lcc_backend_t backend;
+  lcc_backend_t labeled_backend;
   lcc_standard_backend_t standard;
+  lcc_standard_backend_t labeled_standard;
   lcc_backend_capabilities_t capabilities;
   lcc_backend_result_t result;
   lcc_state_snapshot_t state;
@@ -240,4 +276,21 @@ void lcc_run_backend_standard_tests(void) {
   assert(lcc_backend_apply_fan_table(&backend, "M4T1", &result) ==
          LCC_ERR_NOT_SUPPORTED);
   assert(strcmp(result.executor_backend, "standard") == 0);
+
+  init_fake_sysfs_labeled(labeled_root, sizeof(labeled_root));
+  assert(lcc_standard_backend_init_at_root(&labeled_standard, &labeled_backend,
+                                           labeled_root) == LCC_OK);
+
+  memset(&state, 0, sizeof(state));
+  assert(lcc_backend_read_state(&labeled_backend, &state, &result) == LCC_OK);
+  assert(strcmp(result.executor_backend, "standard") == 0);
+  assert(strcmp(result.stage, "read-powercap") == 0);
+  assert(state.thermal.has_cpu_temp_c);
+  assert(state.thermal.cpu_temp_c == 62u);
+  assert(state.thermal.has_gpu_temp_c);
+  assert(state.thermal.gpu_temp_c == 67u);
+  assert(state.thermal.has_cpu_fan_rpm);
+  assert(state.thermal.cpu_fan_rpm == 2888u);
+  assert(state.thermal.has_gpu_fan_rpm);
+  assert(state.thermal.gpu_fan_rpm == 3333u);
 }

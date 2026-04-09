@@ -31,7 +31,8 @@ diagnostic service:
 : the source and freshness attribution for the current `effective` snapshot,
   including per-component views for `profile`, `fan_table`, `power`, and
   `thermal`; `power` also carries field-level attribution for `pl1`, `pl2`,
-  `pl4`, and `tcc_offset`
+  `pl4`, and `tcc_offset`. `thermal` may include vendor-only telemetry such as
+  `vendor_fan_level`, which is not the same thing as RPM
 
 `last_apply_stage`
 : where the most recent mutating command stopped

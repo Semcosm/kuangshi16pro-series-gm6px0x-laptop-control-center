@@ -38,6 +38,7 @@ static void test_manager_profile_and_fan_updates(void) {
   assert(strstr(json, "\"support\"") != NULL);
   assert(strstr(json, "\"thermal\"") != NULL);
   assert(strstr(json, "\"cpu_fan_rpm\":2480") != NULL);
+  assert(strstr(json, "\"vendor_fan_level\":6") != NULL);
   assert(strstr(json, "\"gpu_temp_c\":56") != NULL);
   assert(strstr(json, "\"last_apply_backend\":\"mock\"") != NULL);
   assert(strstr(json, "\"last_apply_hardware_write\":false") != NULL);

@@ -75,6 +75,31 @@ Rules:
   for example `pl1` and `pl2` may come from Linux `powercap` while `pl4` and
   `tcc_offset` remain `null`
 
+## Thermal Object Semantics
+
+The `thermal` object currently carries:
+
+```json
+{
+  "cpu_temp_c": 60,
+  "gpu_temp_c": 25,
+  "cpu_fan_rpm": null,
+  "gpu_fan_rpm": null,
+  "vendor_fan_level": 10
+}
+```
+
+Rules:
+
+- `cpu_fan_rpm` and `gpu_fan_rpm` are real RPM fields; if the daemon cannot
+  prove RPM, they must remain `null`
+- `vendor_fan_level` is a vendor-defined live fan activity level and must not
+  be interpreted as RPM
+- `vendor_fan_level = null` means the daemon does not currently have an
+  explainable vendor fan-level signal
+- additive thermal fields are allowed as long as they keep their own clear
+  semantics and do not overload RPM meanings
+
 ## Effective Metadata
 
 `effective_meta`
@@ -100,7 +125,7 @@ Shape:
         "tcc_offset": {"source": "amw0", "freshness": "live"}
       }
     },
-    "thermal": {"source": "standard", "freshness": "live"}
+    "thermal": {"source": "mixed", "freshness": "live"}
   }
 }
 ```

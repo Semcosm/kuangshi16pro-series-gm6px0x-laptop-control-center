@@ -319,6 +319,11 @@ static void overlay_amw0_state(lcc_state_snapshot_t *state,
     state->thermal.has_gpu_fan_rpm = true;
     state->thermal.gpu_fan_rpm = amw0_state->thermal.gpu_fan_rpm;
   }
+  if (!state->thermal.has_vendor_fan_level &&
+      amw0_state->thermal.has_vendor_fan_level) {
+    state->thermal.has_vendor_fan_level = true;
+    state->thermal.vendor_fan_level = amw0_state->thermal.vendor_fan_level;
+  }
   if (amw0_state->effective_meta.thermal.source[0] != '\0' ||
       amw0_state->effective_meta.thermal.freshness[0] != '\0') {
     merge_component_attribution(&state->effective_meta.thermal,

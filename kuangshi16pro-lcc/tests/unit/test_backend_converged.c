@@ -153,6 +153,11 @@ void lcc_run_backend_converged_tests(void) {
          LCC_OK);
   assert(lcc_amw0_backend_init(&amw0_backend, &amw0_handle, "/proc/acpi/call",
                                NULL, true) == LCC_OK);
+  amw0_backend.shadow_state.thermal.has_vendor_fan_level = true;
+  amw0_backend.shadow_state.thermal.vendor_fan_level = 7u;
+  (void)lcc_backend_effective_component_set(
+      &amw0_backend.shadow_state.effective_meta.thermal, "cache", "cache");
+  lcc_backend_state_finalize_effective_meta(&amw0_backend.shadow_state);
   assert(lcc_backend_probe(&amw0_handle, &amw0_capabilities, &result) ==
          LCC_OK);
   assert(lcc_converged_backend_init(
@@ -187,6 +192,10 @@ void lcc_run_backend_converged_tests(void) {
   assert(strcmp(state.effective_meta.power_fields.pl2.source, "standard") == 0);
   assert(state.effective_meta.power_fields.pl4.source[0] == '\0');
   assert(state.effective_meta.power_fields.tcc_offset.source[0] == '\0');
+  assert(state.thermal.has_vendor_fan_level);
+  assert(state.thermal.vendor_fan_level == 7u);
+  assert(strcmp(state.effective_meta.thermal.source, "mixed") == 0);
+  assert(strcmp(state.effective_meta.thermal.freshness, "mixed") == 0);
 
   assert(lcc_backend_apply_mode(&converged_handle, LCC_MODE_OFFICE, &result) ==
          LCC_OK);

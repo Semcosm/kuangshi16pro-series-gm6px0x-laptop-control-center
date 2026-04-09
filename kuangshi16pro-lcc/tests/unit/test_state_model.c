@@ -278,9 +278,40 @@ static void test_state_reader_refresh_marks_cached_values_on_failure(void) {
   assert(strcmp(state.effective_meta.power_fields.pl1.freshness, "cache") == 0);
 }
 
+static void test_state_render_json_includes_vendor_fan_level(void) {
+  lcc_state_snapshot_t state;
+  lcc_backend_capabilities_t capabilities;
+  char json[2048];
+
+  memset(&state, 0, sizeof(state));
+  memset(&capabilities, 0, sizeof(capabilities));
+  capabilities.can_read_state = true;
+  assert(lcc_backend_copy_text(state.backend_name, sizeof(state.backend_name),
+                               "amw0") == LCC_OK);
+  assert(lcc_backend_copy_text(state.backend_selected,
+                               sizeof(state.backend_selected),
+                               "standard") == LCC_OK);
+  assert(lcc_backend_copy_text(state.requested.profile,
+                               sizeof(state.requested.profile),
+                               "turbo") == LCC_OK);
+  assert(lcc_backend_copy_text(state.effective.profile,
+                               sizeof(state.effective.profile),
+                               "turbo") == LCC_OK);
+  state.thermal.has_vendor_fan_level = true;
+  state.thermal.vendor_fan_level = 10u;
+  (void)lcc_backend_effective_component_set(&state.effective_meta.thermal,
+                                            "amw0", "live");
+  lcc_backend_state_finalize_effective_meta(&state);
+
+  assert(lcc_state_render_json(&state, &capabilities, json, sizeof(json)) ==
+         LCC_OK);
+  assert(strstr(json, "\"vendor_fan_level\":10") != NULL);
+}
+
 void lcc_run_state_model_tests(void) {
   test_state_render_json_includes_last_apply_backend();
   test_state_render_json_renders_unknown_power_fields_as_null();
+  test_state_render_json_includes_vendor_fan_level();
   test_state_reader_refresh_preserves_diagnostic_snapshots();
   test_state_reader_refresh_marks_cached_values_on_failure();
 }

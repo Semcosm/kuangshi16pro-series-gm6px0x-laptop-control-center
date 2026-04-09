@@ -382,7 +382,8 @@ void lcc_backend_state_mark_effective_cached(lcc_state_snapshot_t *state) {
 
   has_thermal = state->thermal.has_cpu_temp_c || state->thermal.has_gpu_temp_c ||
                 state->thermal.has_cpu_fan_rpm ||
-                state->thermal.has_gpu_fan_rpm;
+                state->thermal.has_gpu_fan_rpm ||
+                state->thermal.has_vendor_fan_level;
 
   (void)lcc_backend_effective_component_set(
       &state->effective_meta.profile,

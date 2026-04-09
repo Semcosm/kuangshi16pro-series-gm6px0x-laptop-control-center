@@ -48,8 +48,10 @@ UI comes later.
 - treat `PL1` / `PL2` and `TccOffset` as the currently hardware-proven power
   controls on this machine; keep `PL4` in the product surface, but do not claim
   Intel-telemetry equivalence until it is independently validated
-- prioritize the fan chain next: stronger RPM discovery, write-path validation,
-  and clearer `effective_meta` semantics around fan-table state
+- prioritize the fan chain next:
+  Phase 1 `hwmon` label/name discovery is now in place, and the next work is
+  real-machine RPM confirmation, write-path validation, and clearer
+  `effective_meta` semantics around fan-table state
 
 ## Reverse Priorities
 

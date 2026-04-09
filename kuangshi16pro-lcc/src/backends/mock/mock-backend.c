@@ -297,6 +297,8 @@ void lcc_mock_backend_seed_defaults(lcc_mock_backend_t *mock) {
   mock->state.thermal.cpu_fan_rpm = 2480u;
   mock->state.thermal.has_gpu_fan_rpm = true;
   mock->state.thermal.gpu_fan_rpm = 2310u;
+  mock->state.thermal.has_vendor_fan_level = true;
+  mock->state.thermal.vendor_fan_level = 6u;
   (void)lcc_backend_effective_component_set(&mock->state.effective_meta.profile,
                                             "mock", "live");
   (void)lcc_backend_effective_component_set(

@@ -21,6 +21,8 @@ The goal is not only "fan apply works on one machine", but:
   `fan_table = cache/cache`
 - on real hardware, `cpu_fan_rpm` and `gpu_fan_rpm` may still be `null` even
   when fans are obviously spinning
+- current reverse work shows `FFAN` moving live with load, but only as a
+  vendor fan level; it must not be mislabeled as RPM
 
 ## Engineering Principles
 
@@ -62,6 +64,7 @@ thermal need the same level of rigor:
 - which backend produced the fan-table identity
 - which backend produced RPM and temperature signals
 - whether the daemon is reporting live behavior or retained intent
+- whether a signal is true RPM or only a vendor-defined fan level
 
 ## Recommended Implementation Order
 
@@ -94,6 +97,19 @@ Acceptance:
   when Linux actually exports those sensors
 - unit tests cover mislabeled, partially labeled, and swapped-order fixtures
 
+Current status:
+
+- completed the first discovery upgrade:
+  `standard/hwmon.c` now scores `name`, `temp*_label`, and `fan*_label`
+  instead of assuming only `temp1/temp2/fan1/fan2`
+- unit coverage now includes:
+  multiple `hwmon` directories
+  `temp3` / `fan2` role assignment
+  GPU `temp1` / `fan1` on an `amdgpu` node
+- still pending:
+  real-machine confirmation that the upgraded discovery resolves current
+  `cpu_fan_rpm` / `gpu_fan_rpm` null gaps on the target laptop
+
 ### Phase 2: Introduce explicit fan telemetry attribution
 
 Extend `effective_meta` interpretation for fan state so callers can tell:
@@ -101,6 +117,7 @@ Extend `effective_meta` interpretation for fan state so callers can tell:
 - whether `fan_table` identity is only retained cache
 - whether RPM is coming from `standard` live telemetry
 - whether the daemon has mixed fan evidence
+- whether `vendor_fan_level` is coming from `amw0` live telemetry
 
 The existing model already has:
 

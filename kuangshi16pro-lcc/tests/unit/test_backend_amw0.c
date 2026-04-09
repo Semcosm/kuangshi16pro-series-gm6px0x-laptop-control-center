@@ -63,6 +63,7 @@ static void test_amw0_backend_dry_run_apply(void) {
   assert(strcmp(state.effective.profile, "office") == 0);
   assert(strcmp(state.effective_meta.source, "cache") == 0);
   assert(strcmp(state.effective_meta.freshness, "cache") == 0);
+  assert(!state.thermal.has_vendor_fan_level);
 
   assert(lcc_backend_apply_mode(&backend, LCC_MODE_TURBO, &result) == LCC_OK);
   assert(result.changed);
@@ -109,6 +110,7 @@ static void test_amw0_backend_dry_run_apply(void) {
   assert(strcmp(state.effective_meta.power_fields.pl4.source, "cache") == 0);
   assert(strcmp(state.effective_meta.power_fields.tcc_offset.source, "cache") ==
          0);
+  assert(!state.thermal.has_vendor_fan_level);
 
   read_text_file(trace_path, trace_contents, sizeof(trace_contents));
   assert(strstr(trace_contents, "\\_SB.AMW0.WMBC 0x0 0x4") != NULL);
@@ -118,6 +120,28 @@ static void test_amw0_backend_dry_run_apply(void) {
   assert(strstr(trace_contents, "0x84,0x07,0x82,0x00") != NULL);
 
   (void)unlink(trace_path);
+}
+
+static void test_amw0_backend_dry_run_preserves_vendor_fan_level_cache(void) {
+  lcc_backend_t backend;
+  lcc_amw0_backend_t amw0;
+  lcc_state_snapshot_t state;
+  lcc_backend_result_t result;
+
+  assert(lcc_amw0_backend_init(&amw0, &backend, "/proc/acpi/call", NULL, true) ==
+         LCC_OK);
+  amw0.shadow_state.thermal.has_vendor_fan_level = true;
+  amw0.shadow_state.thermal.vendor_fan_level = 10u;
+  (void)lcc_backend_effective_component_set(&amw0.shadow_state.effective_meta.thermal,
+                                            "cache", "cache");
+  lcc_backend_state_finalize_effective_meta(&amw0.shadow_state);
+
+  memset(&state, 0, sizeof(state));
+  assert(lcc_backend_read_state(&backend, &state, &result) == LCC_OK);
+  assert(state.thermal.has_vendor_fan_level);
+  assert(state.thermal.vendor_fan_level == 10u);
+  assert(strcmp(state.effective_meta.thermal.source, "cache") == 0);
+  assert(strcmp(state.effective_meta.thermal.freshness, "cache") == 0);
 }
 
 static void test_amw0_fan_table_dry_run_apply_order(void) {
@@ -224,6 +248,7 @@ static void test_amw0_transaction_fan_failure_stage(void) {
 
 void lcc_run_backend_amw0_tests(void) {
   test_amw0_backend_dry_run_apply();
+  test_amw0_backend_dry_run_preserves_vendor_fan_level_cache();
   test_amw0_fan_table_dry_run_apply_order();
   test_amw0_transaction_dry_run_apply();
   test_amw0_transaction_fan_failure_stage();

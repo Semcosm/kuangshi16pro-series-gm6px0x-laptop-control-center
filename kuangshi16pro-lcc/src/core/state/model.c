@@ -277,6 +277,7 @@ lcc_status_t lcc_state_render_json(
   char thermal_gpu_temp[32];
   char thermal_cpu_fan[32];
   char thermal_gpu_fan[32];
+  char thermal_vendor_fan_level[32];
   int written = 0;
 
   if (state == NULL || backend_capabilities == NULL || buffer == NULL ||
@@ -369,6 +370,10 @@ lcc_status_t lcc_state_render_json(
   (void)append_u16_or_null(thermal_gpu_fan, sizeof(thermal_gpu_fan),
                            state->thermal.has_gpu_fan_rpm,
                            state->thermal.gpu_fan_rpm);
+  (void)append_u8_or_null(thermal_vendor_fan_level,
+                          sizeof(thermal_vendor_fan_level),
+                          state->thermal.has_vendor_fan_level,
+                          state->thermal.vendor_fan_level);
 
   written = snprintf(
       buffer, buffer_len,
@@ -393,7 +398,7 @@ lcc_status_t lcc_state_render_json(
       "\"last_apply_target\":%s,"
       "\"transaction\":{\"state\":\"%s\",\"operation\":%s,\"stage\":%s,\"last_error\":%s},"
       "\"thermal\":{\"cpu_temp_c\":%s,\"gpu_temp_c\":%s,"
-      "\"cpu_fan_rpm\":%s,\"gpu_fan_rpm\":%s}"
+      "\"cpu_fan_rpm\":%s,\"gpu_fan_rpm\":%s,\"vendor_fan_level\":%s}"
       "}",
       state->backend_name, backend_selected_json, backend_fallback_reason_json,
       execution_json, state->hardware_write ? "true" : "false",
@@ -412,7 +417,7 @@ lcc_status_t lcc_state_render_json(
       transaction_state_name(state->transaction.state), operation_json,
       stage_json,
       last_error_json, thermal_cpu_temp, thermal_gpu_temp, thermal_cpu_fan,
-      thermal_gpu_fan);
+      thermal_gpu_fan, thermal_vendor_fan_level);
   if (written < 0 || (size_t)written >= buffer_len) {
     return LCC_ERR_BUFFER_TOO_SMALL;
   }
@@ -426,6 +431,7 @@ lcc_status_t lcc_state_render_thermal_json(const lcc_state_snapshot_t *state,
   char gpu_temp[32];
   char cpu_fan[32];
   char gpu_fan[32];
+  char vendor_fan_level[32];
   int written = 0;
 
   if (state == NULL || buffer == NULL || buffer_len == 0u) {
@@ -442,6 +448,9 @@ lcc_status_t lcc_state_render_thermal_json(const lcc_state_snapshot_t *state,
   (void)append_u16_or_null(gpu_fan, sizeof(gpu_fan),
                            state->thermal.has_gpu_fan_rpm,
                            state->thermal.gpu_fan_rpm);
+  (void)append_u8_or_null(vendor_fan_level, sizeof(vendor_fan_level),
+                          state->thermal.has_vendor_fan_level,
+                          state->thermal.vendor_fan_level);
 
   written = snprintf(
       buffer, buffer_len,
@@ -452,10 +461,11 @@ lcc_status_t lcc_state_render_thermal_json(const lcc_state_snapshot_t *state,
       "\"cpu_temp_c\":%s,"
       "\"gpu_temp_c\":%s,"
       "\"cpu_fan_rpm\":%s,"
-      "\"gpu_fan_rpm\":%s"
+      "\"gpu_fan_rpm\":%s,"
+      "\"vendor_fan_level\":%s"
       "}",
       state->backend_name, state->effective.profile, cpu_temp, gpu_temp,
-      cpu_fan, gpu_fan);
+      cpu_fan, gpu_fan, vendor_fan_level);
   if (written < 0 || (size_t)written >= buffer_len) {
     return LCC_ERR_BUFFER_TOO_SMALL;
   }

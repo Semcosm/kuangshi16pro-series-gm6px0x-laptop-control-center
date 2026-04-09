@@ -273,7 +273,7 @@ static int print_observe_fan(const char *payload) {
   char execution[256];
   char requested[64];
   char effective[64];
-  char thermal[128];
+  char thermal[192];
   char last_apply_stage[128];
   char last_apply_backend[64];
   char last_apply_error[64];
@@ -350,7 +350,7 @@ static int print_observe_thermal(const char *payload) {
   char backend_selected[64];
   char fallback_reason[256];
   char execution[256];
-  char thermal[128];
+  char thermal[192];
   lcc_status_t status = LCC_OK;
 
   status = extract_json_value(payload, "\"backend\"", backend, sizeof(backend));

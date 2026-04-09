@@ -23,10 +23,12 @@ typedef struct {
 typedef struct {
   bool has_cpu_fan_rpm;
   bool has_gpu_fan_rpm;
+  bool has_vendor_fan_level;
   bool has_cpu_temp_c;
   bool has_gpu_temp_c;
   uint16_t cpu_fan_rpm;
   uint16_t gpu_fan_rpm;
+  uint8_t vendor_fan_level;
   uint8_t cpu_temp_c;
   uint8_t gpu_temp_c;
 } lcc_thermal_state_t;

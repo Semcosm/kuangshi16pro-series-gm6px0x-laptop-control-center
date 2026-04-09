@@ -291,8 +291,8 @@ static lcc_status_t amw0_read_state(void *ctx, lcc_state_snapshot_t *state,
   bool profile_cache = false;
   bool power_live[4] = {false, false, false, false};
   bool power_cache[4] = {false, false, false, false};
-  bool thermal_live[4] = {false, false, false, false};
-  bool thermal_cache[4] = {false, false, false, false};
+  bool thermal_live[5] = {false, false, false, false, false};
+  bool thermal_cache[5] = {false, false, false, false, false};
   uint8_t raw = 0;
 
   if (amw0 == NULL || state == NULL) {
@@ -314,6 +314,7 @@ static lcc_status_t amw0_read_state(void *ctx, lcc_state_snapshot_t *state,
   thermal_cache[1] = state->thermal.has_gpu_temp_c;
   thermal_cache[2] = state->thermal.has_cpu_fan_rpm;
   thermal_cache[3] = state->thermal.has_gpu_fan_rpm;
+  thermal_cache[4] = state->thermal.has_vendor_fan_level;
   set_component_from_readback(&state->effective_meta.fan_table, false,
                               state->effective.fan_table[0] != '\0', "amw0");
 
@@ -329,7 +330,7 @@ static lcc_status_t amw0_read_state(void *ctx, lcc_state_snapshot_t *state,
     set_component_from_readback(
         &state->effective_meta.thermal, false,
         thermal_cache[0] || thermal_cache[1] || thermal_cache[2] ||
-            thermal_cache[3],
+            thermal_cache[3] || thermal_cache[4],
         "amw0");
     lcc_backend_state_finalize_effective_meta(state);
     return LCC_OK;
@@ -402,6 +403,13 @@ static lcc_status_t amw0_read_state(void *ctx, lcc_state_snapshot_t *state,
     thermal_cache[1] = false;
     any_live_value = true;
   }
+  if (read_live_byte(amw0, LCC_AMW0_ADDR_FFAN, &raw) == LCC_OK) {
+    state->thermal.has_vendor_fan_level = true;
+    state->thermal.vendor_fan_level = (uint8_t)(raw & 0x0fu);
+    thermal_live[4] = true;
+    thermal_cache[4] = false;
+    any_live_value = true;
+  }
 
   set_component_from_readback(&state->effective_meta.profile, profile_live,
                               profile_cache, "amw0");
@@ -418,9 +426,9 @@ static lcc_status_t amw0_read_state(void *ctx, lcc_state_snapshot_t *state,
   set_component_from_readback(
       &state->effective_meta.thermal,
       thermal_live[0] || thermal_live[1] || thermal_live[2] ||
-          thermal_live[3],
+          thermal_live[3] || thermal_live[4],
       thermal_cache[0] || thermal_cache[1] || thermal_cache[2] ||
-          thermal_cache[3],
+          thermal_cache[3] || thermal_cache[4],
       "amw0");
   lcc_backend_state_finalize_effective_meta(state);
   amw0->shadow_state = *state;
