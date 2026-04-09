@@ -7,7 +7,8 @@ typedef enum {
   LCC_TRANSACTION_PROFILE = 0,
   LCC_TRANSACTION_MODE,
   LCC_TRANSACTION_POWER_LIMITS,
-  LCC_TRANSACTION_FAN_TABLE
+  LCC_TRANSACTION_FAN_TABLE,
+  LCC_TRANSACTION_FAN_BOOST
 } lcc_transaction_kind_t;
 
 typedef struct {
@@ -16,6 +17,7 @@ typedef struct {
     const char *profile_name;
     const char *mode_name;
     const char *fan_table_name;
+    bool fan_boost_enabled;
     const lcc_power_limits_t *power_limits;
   } input;
 } lcc_transaction_request_t;

@@ -36,6 +36,16 @@
     </defaults>
   </action>
 
+  <action id="io.github.semcosm.Lcc1.set-fan-boost">
+    <description>Toggle OEM fan boost</description>
+    <message>Authentication is required to change OEM fan boost settings.</message>
+    <defaults>
+      <allow_any>no</allow_any>
+      <allow_inactive>no</allow_inactive>
+      <allow_active>auth_admin_keep</allow_active>
+    </defaults>
+  </action>
+
   <action id="io.github.semcosm.Lcc1.set-power-limits">
     <description>Change CPU power limits</description>
     <message>Authentication is required to change CPU power limits.</message>

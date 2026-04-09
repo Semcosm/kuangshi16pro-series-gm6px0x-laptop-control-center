@@ -16,6 +16,8 @@
 typedef struct {
   char profile[LCC_STATE_NAME_MAX];
   char fan_table[LCC_STATE_NAME_MAX];
+  bool has_fan_boost;
+  bool fan_boost_enabled;
   bool has_power_limits;
   lcc_power_limits_t power_limits;
 } lcc_state_target_t;
@@ -54,6 +56,7 @@ typedef struct {
   char apply_mode[LCC_STATE_BACKEND_NAME_MAX];
   char apply_power_limits[LCC_STATE_BACKEND_NAME_MAX];
   char apply_fan_table[LCC_STATE_BACKEND_NAME_MAX];
+  char apply_fan_boost[LCC_STATE_BACKEND_NAME_MAX];
 } lcc_execution_snapshot_t;
 
 typedef struct {
@@ -73,6 +76,7 @@ typedef struct {
   char freshness[LCC_STATE_BACKEND_NAME_MAX];
   lcc_state_component_attribution_t profile;
   lcc_state_component_attribution_t fan_table;
+  lcc_state_component_attribution_t fan_boost;
   lcc_state_component_attribution_t power;
   lcc_power_field_attribution_t power_fields;
   lcc_state_component_attribution_t thermal;

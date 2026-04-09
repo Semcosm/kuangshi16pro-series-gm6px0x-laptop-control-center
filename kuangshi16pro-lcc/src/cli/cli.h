@@ -25,6 +25,7 @@ int lcc_cmd_debug_raw_wmbc(int argc, char **argv);
 int lcc_cmd_mode_set(int argc, char **argv);
 int lcc_cmd_power_set(int argc, char **argv);
 int lcc_cmd_fan_apply(int argc, char **argv);
+int lcc_cmd_fan_boost(int argc, char **argv);
 int lcc_cmd_profile_apply(int argc, char **argv);
 
 #endif

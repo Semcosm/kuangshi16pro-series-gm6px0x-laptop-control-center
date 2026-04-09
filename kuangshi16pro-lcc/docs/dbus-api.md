@@ -26,6 +26,7 @@ Stable methods in v1:
 - `io.github.semcosm.Lcc1.Manager.SetMode(mode_name: s)`
 - `io.github.semcosm.Lcc1.Manager.SetProfile(profile_name: s)`
 - `io.github.semcosm.Lcc1.Fan.ApplyFanTable(table_name: s)`
+- `io.github.semcosm.Lcc1.Fan.SetFanBoost(enabled: b)`
 - `io.github.semcosm.Lcc1.Power.SetPowerLimits(pl1: y, pl2: y, pl4: y, tcc_offset: y, has_pl1: b, has_pl2: b, has_pl4: b, has_tcc_offset: b)`
 
 Authorization model:
@@ -39,9 +40,10 @@ Authorization model:
   - callers on the system bus that are authorized for the method-specific Polkit action
 - method-to-action mapping:
   - `io.github.semcosm.Lcc1.Manager.SetMode` -> `io.github.semcosm.Lcc1.set-mode`
-  - `io.github.semcosm.Lcc1.Manager.SetProfile` -> `io.github.semcosm.Lcc1.set-profile`
-  - `io.github.semcosm.Lcc1.Fan.ApplyFanTable` -> `io.github.semcosm.Lcc1.set-fan-table`
-  - `io.github.semcosm.Lcc1.Power.SetPowerLimits` -> `io.github.semcosm.Lcc1.set-power-limits`
+- `io.github.semcosm.Lcc1.Manager.SetProfile` -> `io.github.semcosm.Lcc1.set-profile`
+- `io.github.semcosm.Lcc1.Fan.ApplyFanTable` -> `io.github.semcosm.Lcc1.set-fan-table`
+- `io.github.semcosm.Lcc1.Fan.SetFanBoost` -> `io.github.semcosm.Lcc1.set-fan-boost`
+- `io.github.semcosm.Lcc1.Power.SetPowerLimits` -> `io.github.semcosm.Lcc1.set-power-limits`
 
 Current transport shape:
 

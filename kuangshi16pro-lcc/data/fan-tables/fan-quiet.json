@@ -3,23 +3,23 @@
   "activated": true,
   "fan_control_respective": true,
   "cpu": [
-    {"id": 0, "up": 45, "down": 42, "duty": 12},
-    {"id": 1, "up": 49, "down": 46, "duty": 16},
-    {"id": 2, "up": 53, "down": 50, "duty": 20},
-    {"id": 3, "up": 57, "down": 54, "duty": 25},
-    {"id": 4, "up": 61, "down": 58, "duty": 30},
-    {"id": 5, "up": 65, "down": 62, "duty": 36},
-    {"id": 6, "up": 69, "down": 66, "duty": 44},
-    {"id": 7, "up": 73, "down": 70, "duty": 52}
+    {"id": 0, "up": 47, "down": 44, "duty": 8},
+    {"id": 1, "up": 51, "down": 48, "duty": 12},
+    {"id": 2, "up": 55, "down": 52, "duty": 16},
+    {"id": 3, "up": 59, "down": 56, "duty": 20},
+    {"id": 4, "up": 63, "down": 60, "duty": 24},
+    {"id": 5, "up": 67, "down": 64, "duty": 28},
+    {"id": 6, "up": 71, "down": 68, "duty": 31},
+    {"id": 7, "up": 75, "down": 72, "duty": 34}
   ],
   "gpu": [
-    {"id": 0, "up": 47, "down": 44, "duty": 14},
-    {"id": 1, "up": 51, "down": 48, "duty": 18},
-    {"id": 2, "up": 55, "down": 52, "duty": 22},
-    {"id": 3, "up": 59, "down": 56, "duty": 27},
-    {"id": 4, "up": 63, "down": 60, "duty": 32},
-    {"id": 5, "up": 67, "down": 64, "duty": 38},
-    {"id": 6, "up": 71, "down": 68, "duty": 46},
-    {"id": 7, "up": 75, "down": 72, "duty": 54}
+    {"id": 0, "up": 49, "down": 46, "duty": 10},
+    {"id": 1, "up": 53, "down": 50, "duty": 14},
+    {"id": 2, "up": 57, "down": 54, "duty": 18},
+    {"id": 3, "up": 61, "down": 58, "duty": 22},
+    {"id": 4, "up": 65, "down": 62, "duty": 26},
+    {"id": 5, "up": 69, "down": 66, "duty": 30},
+    {"id": 6, "up": 73, "down": 70, "duty": 33},
+    {"id": 7, "up": 77, "down": 74, "duty": 36}
   ]
 }

@@ -114,7 +114,8 @@ lcc_status_t lcc_backend_execution_set(lcc_execution_snapshot_t *execution,
                                        const char *apply_profile,
                                        const char *apply_mode,
                                        const char *apply_power_limits,
-                                       const char *apply_fan_table) {
+                                       const char *apply_fan_table,
+                                       const char *apply_fan_boost) {
   if (execution == NULL) {
     return LCC_ERR_INVALID_ARGUMENT;
   }
@@ -149,6 +150,12 @@ lcc_status_t lcc_backend_execution_set(lcc_execution_snapshot_t *execution,
                             apply_fan_table) != LCC_OK) {
     return LCC_ERR_BUFFER_TOO_SMALL;
   }
+  if (apply_fan_boost != NULL && apply_fan_boost[0] != '\0' &&
+      lcc_backend_copy_text(execution->apply_fan_boost,
+                            sizeof(execution->apply_fan_boost),
+                            apply_fan_boost) != LCC_OK) {
+    return LCC_ERR_BUFFER_TOO_SMALL;
+  }
 
   return LCC_OK;
 }
@@ -156,7 +163,8 @@ lcc_status_t lcc_backend_execution_set(lcc_execution_snapshot_t *execution,
 lcc_status_t lcc_backend_execution_set_all(lcc_execution_snapshot_t *execution,
                                            const char *backend_name) {
   return lcc_backend_execution_set(execution, backend_name, backend_name,
-                                   backend_name, backend_name, backend_name);
+                                   backend_name, backend_name, backend_name,
+                                   backend_name);
 }
 
 lcc_status_t lcc_backend_state_set_metadata(
@@ -353,6 +361,8 @@ void lcc_backend_effective_meta_finalize(
   merge_text(effective_meta->source, sizeof(effective_meta->source),
              effective_meta->fan_table.source, "mixed");
   merge_text(effective_meta->source, sizeof(effective_meta->source),
+             effective_meta->fan_boost.source, "mixed");
+  merge_text(effective_meta->source, sizeof(effective_meta->source),
              effective_meta->power.source, "mixed");
   merge_text(effective_meta->source, sizeof(effective_meta->source),
              effective_meta->thermal.source, "mixed");
@@ -361,6 +371,8 @@ void lcc_backend_effective_meta_finalize(
              effective_meta->profile.freshness, "mixed");
   merge_text(effective_meta->freshness, sizeof(effective_meta->freshness),
              effective_meta->fan_table.freshness, "mixed");
+  merge_text(effective_meta->freshness, sizeof(effective_meta->freshness),
+             effective_meta->fan_boost.freshness, "mixed");
   merge_text(effective_meta->freshness, sizeof(effective_meta->freshness),
              effective_meta->power.freshness, "mixed");
   merge_text(effective_meta->freshness, sizeof(effective_meta->freshness),
@@ -393,6 +405,10 @@ void lcc_backend_state_mark_effective_cached(lcc_state_snapshot_t *state) {
       &state->effective_meta.fan_table,
       state->effective.fan_table[0] != '\0' ? "cache" : NULL,
       state->effective.fan_table[0] != '\0' ? "cache" : NULL);
+  (void)lcc_backend_effective_component_set(
+      &state->effective_meta.fan_boost,
+      state->effective.has_fan_boost ? "cache" : NULL,
+      state->effective.has_fan_boost ? "cache" : NULL);
   lcc_backend_effective_power_set_from_limits(
       &state->effective_meta,
       state->effective.has_power_limits ? &state->effective.power_limits : NULL,
@@ -536,4 +552,17 @@ lcc_status_t lcc_backend_apply_fan_table(const lcc_backend_t *backend,
   }
 
   return backend->ops->apply_fan_table(backend->ctx, table_name, result);
+}
+
+lcc_status_t lcc_backend_apply_fan_boost(const lcc_backend_t *backend,
+                                         bool enabled,
+                                         lcc_backend_result_t *result) {
+  if (backend == NULL) {
+    return LCC_ERR_INVALID_ARGUMENT;
+  }
+  if (backend->ops == NULL || backend->ops->apply_fan_boost == NULL) {
+    return unsupported_operation(result);
+  }
+
+  return backend->ops->apply_fan_boost(backend->ctx, enabled, result);
 }

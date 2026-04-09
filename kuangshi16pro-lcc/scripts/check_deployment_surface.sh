@@ -191,22 +191,28 @@ check_method_contract \
   "$fan_xml" \
   "io.github.semcosm.Lcc1.set-fan-table"
 check_method_contract \
+  "io.github.semcosm.Lcc1.Fan" \
+  "SetFanBoost" \
+  "\`io.github.semcosm.Lcc1.Fan.SetFanBoost(enabled: b)\`" \
+  "$fan_xml" \
+  "io.github.semcosm.Lcc1.set-fan-boost"
+check_method_contract \
   "io.github.semcosm.Lcc1.Power" \
   "SetPowerLimits" \
   "\`io.github.semcosm.Lcc1.Power.SetPowerLimits(pl1: y, pl2: y, pl4: y, tcc_offset: y, has_pl1: b, has_pl2: b, has_pl4: b, has_tcc_offset: b)\`" \
   "$power_xml" \
   "io.github.semcosm.Lcc1.set-power-limits"
 
-if [[ "$(grep -c 'send_member=' "$bus_config")" -ne 8 ]]; then
+if [[ "$(grep -c 'send_member=' "$bus_config")" -ne 9 ]]; then
   fail "$bus_config does not expose exactly the stable v1 methods plus Introspect/Ping"
 fi
 
-if [[ "$(grep -ch '<method name=' "$manager_xml" "$fan_xml" "$power_xml" | awk '{sum += $1} END {print sum}')" -ne 6 ]]; then
-  fail "introspection XML no longer exposes exactly six stable v1 methods"
+if [[ "$(grep -ch '<method name=' "$manager_xml" "$fan_xml" "$power_xml" | awk '{sum += $1} END {print sum}')" -ne 7 ]]; then
+  fail "introspection XML no longer exposes exactly seven stable v1 methods"
 fi
 
-if [[ "$(grep -c '<action id=' "$polkit_policy")" -ne 4 ]]; then
-  fail "$polkit_policy does not define exactly four mutating action ids"
+if [[ "$(grep -c '<action id=' "$polkit_policy")" -ne 5 ]]; then
+  fail "$polkit_policy does not define exactly five mutating action ids"
 fi
 
 require_line "$readme" "installable systemd, D-Bus, and Polkit assets"

@@ -32,6 +32,7 @@ lcc_status_t lcc_manager_set_profile(lcc_manager_t *manager,
                                      const char *profile_name);
 lcc_status_t lcc_manager_apply_fan_table(lcc_manager_t *manager,
                                          const char *table_name);
+lcc_status_t lcc_manager_set_fan_boost(lcc_manager_t *manager, bool enabled);
 lcc_status_t lcc_manager_set_power_limits(lcc_manager_t *manager,
                                           const lcc_power_limits_t *limits);
 

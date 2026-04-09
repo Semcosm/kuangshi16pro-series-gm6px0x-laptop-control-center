@@ -53,6 +53,7 @@ static void test_amw0_backend_dry_run_apply(void) {
   assert(capabilities.can_apply_mode);
   assert(capabilities.can_apply_power_limits);
   assert(capabilities.can_apply_fan_table);
+  assert(capabilities.can_apply_fan_boost);
 
   memset(&state, 0, sizeof(state));
   assert(lcc_backend_read_state(&backend, &state, &result) == LCC_OK);
@@ -118,6 +119,41 @@ static void test_amw0_backend_dry_run_apply(void) {
   assert(strstr(trace_contents, "0x51,0x07,0x10,0x00") != NULL);
   assert(strstr(trace_contents, "0x83,0x07,0x4B,0x00") != NULL);
   assert(strstr(trace_contents, "0x84,0x07,0x82,0x00") != NULL);
+
+  (void)unlink(trace_path);
+}
+
+static void test_amw0_backend_dry_run_fan_boost_apply(void) {
+  char trace_path[256];
+  char trace_contents[4096];
+  lcc_backend_t backend;
+  lcc_amw0_backend_t amw0;
+  lcc_backend_result_t result;
+  lcc_state_snapshot_t state;
+
+  make_trace_path(trace_path, sizeof(trace_path));
+  (void)unlink(trace_path);
+
+  assert(lcc_amw0_backend_init(&amw0, &backend, "/proc/acpi/call", NULL, true) ==
+         LCC_OK);
+  assert(amw0_backend_set_trace(&amw0.transport, trace_path) == LCC_OK);
+
+  assert(lcc_backend_apply_fan_boost(&backend, true, &result) == LCC_OK);
+  assert(result.changed);
+  assert(!result.hardware_write);
+  assert(strcmp(result.executor_backend, "amw0") == 0);
+  assert(strcmp(result.stage, "set-fan-boost") == 0);
+
+  memset(&state, 0, sizeof(state));
+  assert(lcc_backend_read_state(&backend, &state, &result) == LCC_OK);
+  assert(state.effective.has_fan_boost);
+  assert(state.effective.fan_boost_enabled);
+  assert(strcmp(state.effective.profile, "office") == 0);
+  assert(strcmp(state.effective_meta.fan_boost.source, "cache") == 0);
+  assert(strcmp(state.effective_meta.fan_boost.freshness, "cache") == 0);
+
+  read_text_file(trace_path, trace_contents, sizeof(trace_contents));
+  assert(strstr(trace_contents, "0x51,0x07,0x40,0x00") != NULL);
 
   (void)unlink(trace_path);
 }
@@ -259,6 +295,7 @@ static void test_amw0_transaction_fan_failure_stage(void) {
 
 void lcc_run_backend_amw0_tests(void) {
   test_amw0_backend_dry_run_apply();
+  test_amw0_backend_dry_run_fan_boost_apply();
   test_amw0_backend_dry_run_preserves_vendor_fan_level_cache();
   test_amw0_fan_table_dry_run_apply_order();
   test_amw0_transaction_dry_run_apply();

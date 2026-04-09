@@ -56,6 +56,7 @@ void lcc_cli_print_usage(FILE *stream) {
                 "[--user-bus | --system-bus]\n"
                 "  lccctl fan apply [--preset demo | --file PATH] [--plan] "
                 "[--user-bus | --system-bus]\n"
+                "  lccctl fan boost on|off [--user-bus | --system-bus]\n"
                 "  lccctl profile apply --file PATH [--plan] "
                 "[--user-bus | --system-bus]\n"
                 "\n"
@@ -186,6 +187,10 @@ int main(int argc, char **argv) {
   if (strcmp(argv[1], "fan") == 0 && argc >= 3 &&
       strcmp(argv[2], "apply") == 0) {
     return lcc_cmd_fan_apply(argc - 3, argv + 3);
+  }
+  if (strcmp(argv[1], "fan") == 0 && argc >= 3 &&
+      strcmp(argv[2], "boost") == 0) {
+    return lcc_cmd_fan_boost(argc - 3, argv + 3);
   }
   if (strcmp(argv[1], "profile") == 0 && argc >= 3 &&
       strcmp(argv[2], "apply") == 0) {

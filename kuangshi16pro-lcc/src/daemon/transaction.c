@@ -100,6 +100,8 @@ static const char *transaction_operation_name(lcc_transaction_kind_t kind) {
       return "set-power-limits";
     case LCC_TRANSACTION_FAN_TABLE:
       return "apply-fan-table";
+    case LCC_TRANSACTION_FAN_BOOST:
+      return "set-fan-boost";
   }
 
   return "unknown";
@@ -115,6 +117,8 @@ static const char *transaction_capability_name(lcc_transaction_kind_t kind) {
       return "apply_power_limits";
     case LCC_TRANSACTION_FAN_TABLE:
       return "apply_fan_table";
+    case LCC_TRANSACTION_FAN_BOOST:
+      return "apply_fan_boost";
   }
 
   return "unknown";
@@ -136,6 +140,8 @@ static bool transaction_capability_supported(
       return capabilities->can_apply_power_limits;
     case LCC_TRANSACTION_FAN_TABLE:
       return capabilities->can_apply_fan_table;
+    case LCC_TRANSACTION_FAN_BOOST:
+      return capabilities->can_apply_fan_boost;
   }
 
   return false;
@@ -189,6 +195,10 @@ static void format_target_summary(const lcc_state_target_t *target, char *buffer
 
   append_text_field(buffer, buffer_len, &first, "profile", target->profile);
   append_text_field(buffer, buffer_len, &first, "fan_table", target->fan_table);
+  if (target->has_fan_boost) {
+    append_text_field(buffer, buffer_len, &first, "fan_boost",
+                      target->fan_boost_enabled ? "true" : "false");
+  }
   if (target->has_power_limits) {
     append_optional_limit(buffer, buffer_len, &first, "pl1",
                           target->power_limits.pl1);
@@ -474,6 +484,10 @@ static lcc_status_t transaction_stage_target(
       }
       return copy_name(target->fan_table, sizeof(target->fan_table),
                        request->input.fan_table_name);
+    case LCC_TRANSACTION_FAN_BOOST:
+      target->has_fan_boost = true;
+      target->fan_boost_enabled = request->input.fan_boost_enabled;
+      return LCC_OK;
   }
 
   return LCC_ERR_INVALID_ARGUMENT;
@@ -546,6 +560,10 @@ static lcc_status_t transaction_apply(lcc_manager_t *manager,
     case LCC_TRANSACTION_FAN_TABLE:
       return lcc_backend_apply_fan_table(manager->backend,
                                          request->input.fan_table_name, result);
+    case LCC_TRANSACTION_FAN_BOOST:
+      return lcc_backend_apply_fan_boost(manager->backend,
+                                         request->input.fan_boost_enabled,
+                                         result);
   }
 
   return LCC_ERR_INVALID_ARGUMENT;
@@ -611,6 +629,8 @@ lcc_status_t lcc_transaction_execute(lcc_manager_t *manager,
                      request->input.fan_table_name != NULL
                          ? request->input.fan_table_name
                          : "none");
+    } else if (request->kind == LCC_TRANSACTION_FAN_BOOST) {
+      (void)snprintf(detail, sizeof(detail), "fan boost preflight rejected");
     } else {
       (void)snprintf(detail, sizeof(detail),
                      "power target requires at least one present limit");

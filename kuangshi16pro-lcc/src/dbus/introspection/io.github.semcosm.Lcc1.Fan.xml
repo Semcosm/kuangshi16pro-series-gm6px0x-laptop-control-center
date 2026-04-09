@@ -7,5 +7,10 @@
       <annotation name="io.github.semcosm.Lcc1.AuthorizationAction" value="io.github.semcosm.Lcc1.set-fan-table"/>
       <arg name="table_name" type="s" direction="in"/>
     </method>
+    <method name="SetFanBoost">
+      <annotation name="io.github.semcosm.Lcc1.Access" value="write"/>
+      <annotation name="io.github.semcosm.Lcc1.AuthorizationAction" value="io.github.semcosm.Lcc1.set-fan-boost"/>
+      <arg name="enabled" type="b" direction="in"/>
+    </method>
   </interface>
 </node>

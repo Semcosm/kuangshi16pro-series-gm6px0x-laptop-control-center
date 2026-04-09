@@ -127,8 +127,8 @@ static void test_builtin_fan_tables_load(void) {
   assert(lcc_fan_table_load_file("data/fan-tables/fan-quiet.json", &quiet) ==
          LCC_OK);
   assert(strcmp(quiet.name, "fan-quiet") == 0);
-  assert(quiet.cpu[0].up_temp == 45u);
-  assert(quiet.gpu[7].duty == 54u);
+  assert(quiet.cpu[0].up_temp == 47u);
+  assert(quiet.gpu[7].duty == 36u);
 
   assert(lcc_fan_table_load_file("data/fan-tables/fan-fullspeed.json",
                                  &fullspeed) == LCC_OK);

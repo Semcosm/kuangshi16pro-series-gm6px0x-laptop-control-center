@@ -81,6 +81,7 @@ grep -q 'io.github.semcosm.Lcc1.Manager' "$introspection_file"
 grep -q 'GetState' "$introspection_file"
 grep -q 'SetMode' "$introspection_file"
 grep -q 'ApplyFanTable' "$introspection_file"
+grep -q 'SetFanBoost' "$introspection_file"
 grep -q 'SetPowerLimits' "$introspection_file"
 
 state_before="$("$PROJECT_DIR/build/lccctl" state --user-bus)"
@@ -89,11 +90,13 @@ printf '%s\n' "$state_before" | grep -q '"backend":"mock"'
 "$PROJECT_DIR/build/lccctl" mode set turbo --user-bus >/tmp/lcc-mode.out
 "$PROJECT_DIR/build/lccctl" power set --pl1 75 --pl2 130 --user-bus >/tmp/lcc-power.out
 "$PROJECT_DIR/build/lccctl" fan apply --preset M4T1 --user-bus >/tmp/lcc-fan.out
+"$PROJECT_DIR/build/lccctl" fan boost on --user-bus >/tmp/lcc-fan-boost.out
 
 state_after="$("$PROJECT_DIR/build/lccctl" state --user-bus)"
 printf '%s\n' "$state_after" | grep -q '"backend":"mock"'
 printf '%s\n' "$state_after" | grep -q '"profile":"turbo"'
 printf '%s\n' "$state_after" | grep -q '"fan_table":"M4T1"'
+printf '%s\n' "$state_after" | grep -q '"fan_boost":true'
 printf '%s\n' "$state_after" | grep -q '"pl1":75'
 printf '%s\n' "$state_after" | grep -q '"pl2":130'
 
@@ -115,10 +118,12 @@ start_daemon /tmp/lccd-amw0.log \
   LCC_AMW0_DRY_RUN=1
 
 "$PROJECT_DIR/build/lccctl" power set --pl1 70 --pl2 120 --user-bus >/tmp/lcc-amw0-power.out
+"$PROJECT_DIR/build/lccctl" fan boost on --user-bus >/tmp/lcc-amw0-fan-boost.out
 amw0_state="$("$PROJECT_DIR/build/lccctl" state --user-bus)"
 printf '%s\n' "$amw0_state" | grep -q '"backend":"amw0"'
 printf '%s\n' "$amw0_state" | grep -q '"last_apply_backend":"amw0"'
-printf '%s\n' "$amw0_state" | grep -q '"last_apply_stage":"write-pl2"'
+printf '%s\n' "$amw0_state" | grep -q '"last_apply_stage":"set-fan-boost"'
+printf '%s\n' "$amw0_state" | grep -q '"fan_boost":true'
 printf '%s\n' "$amw0_state" | grep -q '"pl1":70'
 printf '%s\n' "$amw0_state" | grep -q '"pl2":120'
 

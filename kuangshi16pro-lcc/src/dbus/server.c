@@ -144,6 +144,30 @@ static int method_apply_fan_table(sd_bus_message *message, void *userdata,
   return sd_bus_reply_method_return(message, "");
 }
 
+static int method_set_fan_boost(sd_bus_message *message, void *userdata,
+                                sd_bus_error *ret_error) {
+  lcc_dbus_server_context_t *context = userdata;
+  int enabled = 0;
+  lcc_status_t status = LCC_OK;
+  int r = sd_bus_message_read(message, "b", &enabled);
+
+  if (r < 0) {
+    return r;
+  }
+  r = authorize_method(message, context, LCC_DBUS_ACCESS_WRITE,
+                       LCC_DBUS_ACTION_SET_FAN_BOOST, ret_error);
+  if (r < 0) {
+    return r;
+  }
+
+  status = lcc_manager_set_fan_boost(context->manager, enabled != 0);
+  if (status != LCC_OK) {
+    return lcc_dbus_error_set(ret_error, status);
+  }
+
+  return sd_bus_reply_method_return(message, "");
+}
+
 static int method_set_power_limits(sd_bus_message *message, void *userdata,
                                    sd_bus_error *ret_error) {
   lcc_dbus_server_context_t *context = userdata;
@@ -195,6 +219,8 @@ static const sd_bus_vtable manager_vtable[] = {
 static const sd_bus_vtable fan_vtable[] = {
     SD_BUS_VTABLE_START(0),
     SD_BUS_METHOD("ApplyFanTable", "s", "", method_apply_fan_table,
+                  SD_BUS_VTABLE_UNPRIVILEGED),
+    SD_BUS_METHOD("SetFanBoost", "b", "", method_set_fan_boost,
                   SD_BUS_VTABLE_UNPRIVILEGED),
     SD_BUS_VTABLE_END};
 

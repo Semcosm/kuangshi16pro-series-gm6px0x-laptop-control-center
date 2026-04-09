@@ -62,6 +62,7 @@ static int append_power_json(char *buffer, size_t buffer_len,
 
 static int append_target_json(char *buffer, size_t buffer_len,
                               const lcc_state_target_t *target) {
+  char fan_boost_json[16];
   char power_json[128];
   int power_written = 0;
 
@@ -70,13 +71,17 @@ static int append_target_json(char *buffer, size_t buffer_len,
   }
 
   power_written = append_power_json(power_json, sizeof(power_json), target);
-  if (power_written < 0) {
+  if (power_written < 0 ||
+      append_bool_or_null(fan_boost_json, sizeof(fan_boost_json),
+                          target->has_fan_boost,
+                          target->fan_boost_enabled) < 0) {
     return -1;
   }
 
   return snprintf(buffer, buffer_len,
-                  "{\"profile\":\"%s\",\"fan_table\":\"%s\",\"power\":%s}",
-                  target->profile, target->fan_table, power_json);
+                  "{\"profile\":\"%s\",\"fan_table\":\"%s\",\"fan_boost\":%s,\"power\":%s}",
+                  target->profile, target->fan_table, fan_boost_json,
+                  power_json);
 }
 
 static int append_string_or_null(char *buffer, size_t buffer_len,
@@ -102,6 +107,7 @@ static int append_execution_json(char *buffer, size_t buffer_len,
   char apply_mode_json[64];
   char apply_power_limits_json[64];
   char apply_fan_table_json[64];
+  char apply_fan_boost_json[64];
 
   if (buffer == NULL || buffer_len == 0u || execution == NULL) {
     return -1;
@@ -117,7 +123,10 @@ static int append_execution_json(char *buffer, size_t buffer_len,
                             execution->apply_power_limits) < 0 ||
       append_string_or_null(apply_fan_table_json,
                             sizeof(apply_fan_table_json),
-                            execution->apply_fan_table) < 0) {
+                            execution->apply_fan_table) < 0 ||
+      append_string_or_null(apply_fan_boost_json,
+                            sizeof(apply_fan_boost_json),
+                            execution->apply_fan_boost) < 0) {
     return -1;
   }
 
@@ -127,10 +136,12 @@ static int append_execution_json(char *buffer, size_t buffer_len,
                   "\"apply_profile\":%s,"
                   "\"apply_mode\":%s,"
                   "\"apply_power_limits\":%s,"
-                  "\"apply_fan_table\":%s"
+                  "\"apply_fan_table\":%s,"
+                  "\"apply_fan_boost\":%s"
                   "}",
                   read_state_json, apply_profile_json, apply_mode_json,
-                  apply_power_limits_json, apply_fan_table_json);
+                  apply_power_limits_json, apply_fan_table_json,
+                  apply_fan_boost_json);
 }
 
 static int append_component_attribution_json(
@@ -204,6 +215,7 @@ static int append_effective_meta_json(
   char freshness_json[64];
   char profile_json[96];
   char fan_table_json[96];
+  char fan_boost_json[96];
   char power_json[512];
   char thermal_json[96];
 
@@ -219,6 +231,9 @@ static int append_effective_meta_json(
       append_component_attribution_json(fan_table_json,
                                         sizeof(fan_table_json),
                                         &effective_meta->fan_table) < 0 ||
+      append_component_attribution_json(fan_boost_json,
+                                        sizeof(fan_boost_json),
+                                        &effective_meta->fan_boost) < 0 ||
       append_power_attribution_json(power_json, sizeof(power_json),
                                     effective_meta) < 0 ||
       append_component_attribution_json(thermal_json, sizeof(thermal_json),
@@ -233,12 +248,13 @@ static int append_effective_meta_json(
                   "\"components\":{"
                   "\"profile\":%s,"
                   "\"fan_table\":%s,"
+                  "\"fan_boost\":%s,"
                   "\"power\":%s,"
                   "\"thermal\":%s"
                   "}"
                   "}",
                   source_json, freshness_json, profile_json, fan_table_json,
-                  power_json, thermal_json);
+                  fan_boost_json, power_json, thermal_json);
 }
 
 static const char *transaction_state_name(lcc_transaction_state_t state) {
@@ -386,6 +402,7 @@ lcc_status_t lcc_state_render_json(
       "\"hardware_write\":%s,"
       "\"support\":{\"read_state\":%s,\"apply_profile\":%s,"
       "\"apply_mode\":%s,\"apply_power_limits\":%s,\"apply_fan_table\":%s,"
+      "\"apply_fan_boost\":%s,"
       "\"platform_profile\":%s,\"powercap\":%s,\"mux_reboot_required\":%s},"
       "\"requested\":%s,"
       "\"effective\":%s,"
@@ -407,6 +424,7 @@ lcc_status_t lcc_state_render_json(
       backend_capabilities->can_apply_mode ? "true" : "false",
       backend_capabilities->can_apply_power_limits ? "true" : "false",
       backend_capabilities->can_apply_fan_table ? "true" : "false",
+      backend_capabilities->can_apply_fan_boost ? "true" : "false",
       backend_capabilities->has_platform_profile ? "true" : "false",
       backend_capabilities->has_powercap ? "true" : "false",
       backend_capabilities->needs_reboot_for_mux ? "true" : "false",

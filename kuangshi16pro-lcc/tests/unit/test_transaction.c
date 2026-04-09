@@ -221,6 +221,31 @@ static void test_transaction_failure_path(void) {
   assert(strcmp(manager.state_cache.requested.profile, "balanced") == 0);
 }
 
+static void test_transaction_fan_boost_happy_path(void) {
+  lcc_backend_t backend;
+  lcc_mock_backend_t mock_backend;
+  lcc_manager_t manager;
+  lcc_transaction_request_t request;
+
+  assert(lcc_mock_backend_init(&mock_backend, &backend) == LCC_OK);
+  assert(lcc_manager_init(&manager, &backend, NULL) == LCC_OK);
+
+  memset(&request, 0, sizeof(request));
+  request.kind = LCC_TRANSACTION_FAN_BOOST;
+  request.input.fan_boost_enabled = true;
+  assert(lcc_transaction_execute(&manager, &request) == LCC_OK);
+  assert(manager.state_cache.transaction.state == LCC_TRANSACTION_STATE_IDLE);
+  assert(manager.state_cache.requested.has_fan_boost);
+  assert(manager.state_cache.requested.fan_boost_enabled);
+  assert(manager.state_cache.effective.has_fan_boost);
+  assert(manager.state_cache.effective.fan_boost_enabled);
+  assert(manager.state_cache.last_apply.has_target);
+  assert(manager.state_cache.last_apply.target.has_fan_boost);
+  assert(manager.state_cache.last_apply.target.fan_boost_enabled);
+  assert(strcmp(manager.state_cache.last_apply.stage, "apply") == 0);
+  assert(strcmp(manager.state_cache.last_apply.backend, "mock") == 0);
+}
+
 static void test_transaction_preflight_failure_records_state(void) {
   lcc_backend_t backend;
   lcc_mock_backend_t mock_backend;
@@ -445,6 +470,7 @@ static void test_transaction_converged_mixed_power_apply_records_split_executor(
 void lcc_run_transaction_tests(void) {
   test_transaction_happy_path();
   test_transaction_failure_path();
+  test_transaction_fan_boost_happy_path();
   test_transaction_preflight_failure_records_state();
   test_transaction_capability_gate_records_state();
   test_transaction_backend_route_failure_records_state();

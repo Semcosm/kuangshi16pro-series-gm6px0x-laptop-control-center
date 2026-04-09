@@ -149,7 +149,8 @@ lcc_status_t lcc_capabilities_detect_json(
       "\"service\":\"lccd\","
       "\"backend_selected\":\"%s\","
       "\"support\":{\"read_state\":%s,\"apply_profile\":%s,"
-      "\"apply_mode\":%s,\"apply_power_limits\":%s,\"apply_fan_table\":%s},"
+      "\"apply_mode\":%s,\"apply_power_limits\":%s,\"apply_fan_table\":%s,"
+      "\"apply_fan_boost\":%s},"
       "\"platform_profile\":{\"preferred\":%s,\"fallback_required\":%s,"
       "\"available\":%s},"
       "\"powercap\":{\"available\":%s},"
@@ -162,6 +163,7 @@ lcc_status_t lcc_capabilities_detect_json(
       backend_capabilities->can_apply_mode ? "true" : "false",
       backend_capabilities->can_apply_power_limits ? "true" : "false",
       backend_capabilities->can_apply_fan_table ? "true" : "false",
+      backend_capabilities->can_apply_fan_boost ? "true" : "false",
       model_map.platform_profile_preferred ? "true" : "false",
       model_map.platform_profile_fallback_required ? "true" : "false",
       backend_capabilities->has_platform_profile ? "true" : "false",

@@ -11,6 +11,7 @@ typedef enum {
   LCC_CONVERGED_ROUTE_APPLY_MODE,
   LCC_CONVERGED_ROUTE_APPLY_POWER_LIMITS,
   LCC_CONVERGED_ROUTE_APPLY_FAN_TABLE,
+  LCC_CONVERGED_ROUTE_APPLY_FAN_BOOST,
 } lcc_converged_route_kind_t;
 
 static bool capability_for_route(const lcc_backend_capabilities_t *capabilities,
@@ -30,6 +31,8 @@ static bool capability_for_route(const lcc_backend_capabilities_t *capabilities,
       return capabilities->can_apply_power_limits;
     case LCC_CONVERGED_ROUTE_APPLY_FAN_TABLE:
       return capabilities->can_apply_fan_table;
+    case LCC_CONVERGED_ROUTE_APPLY_FAN_BOOST:
+      return capabilities->can_apply_fan_boost;
   }
 
   return false;
@@ -272,6 +275,14 @@ static void overlay_amw0_state(lcc_state_snapshot_t *state,
     replace_component_attribution(&state->effective_meta.fan_table,
                                   &amw0_state->effective_meta.fan_table);
   }
+  if (amw0_state->effective.has_fan_boost) {
+    state->requested.has_fan_boost = amw0_state->requested.has_fan_boost;
+    state->requested.fan_boost_enabled = amw0_state->requested.fan_boost_enabled;
+    state->effective.has_fan_boost = amw0_state->effective.has_fan_boost;
+    state->effective.fan_boost_enabled = amw0_state->effective.fan_boost_enabled;
+    replace_component_attribution(&state->effective_meta.fan_boost,
+                                  &amw0_state->effective_meta.fan_boost);
+  }
   if (amw0_state->effective.has_power_limits) {
     overlay_power_field(&state->requested.power_limits.pl1,
                         amw0_state->requested.power_limits.pl1,
@@ -385,7 +396,9 @@ static void build_selection_metadata(lcc_converged_backend_t *converged) {
       route_backend_name(route_primary_backend(
           converged, LCC_CONVERGED_ROUTE_APPLY_POWER_LIMITS)),
       route_backend_name(route_primary_backend(
-          converged, LCC_CONVERGED_ROUTE_APPLY_FAN_TABLE)));
+          converged, LCC_CONVERGED_ROUTE_APPLY_FAN_TABLE)),
+      route_backend_name(route_primary_backend(
+          converged, LCC_CONVERGED_ROUTE_APPLY_FAN_BOOST)));
 
   if (strcmp(converged->backend_selected, "standard") == 0) {
     fallback_ops[0] = '\0';
@@ -405,6 +418,10 @@ static void build_selection_metadata(lcc_converged_backend_t *converged) {
       append_operation(fallback_ops, sizeof(fallback_ops), &first,
                        "apply_fan_table");
     }
+    if (strcmp(converged->execution.apply_fan_boost, "amw0") == 0) {
+      append_operation(fallback_ops, sizeof(fallback_ops), &first,
+                       "apply_fan_boost");
+    }
 
     if (fallback_ops[0] != '\0') {
       (void)snprintf(converged->backend_fallback_reason,
@@ -416,7 +433,8 @@ static void build_selection_metadata(lcc_converged_backend_t *converged) {
 
     if (!converged->amw0_available &&
         (!converged->standard_capabilities.can_apply_power_limits ||
-         !converged->standard_capabilities.can_apply_fan_table)) {
+         !converged->standard_capabilities.can_apply_fan_table ||
+         !converged->standard_capabilities.can_apply_fan_boost)) {
       first = true;
       fallback_ops[0] = '\0';
       if (!converged->standard_capabilities.can_apply_power_limits) {
@@ -426,6 +444,10 @@ static void build_selection_metadata(lcc_converged_backend_t *converged) {
       if (!converged->standard_capabilities.can_apply_fan_table) {
         append_operation(fallback_ops, sizeof(fallback_ops), &first,
                          "apply_fan_table");
+      }
+      if (!converged->standard_capabilities.can_apply_fan_boost) {
+        append_operation(fallback_ops, sizeof(fallback_ops), &first,
+                         "apply_fan_boost");
       }
       if (fallback_ops[0] != '\0') {
         (void)snprintf(converged->backend_fallback_reason,
@@ -472,6 +494,9 @@ static lcc_status_t converged_probe(void *ctx,
   capabilities->can_apply_fan_table =
       route_primary_backend(converged,
                             LCC_CONVERGED_ROUTE_APPLY_FAN_TABLE) != NULL;
+  capabilities->can_apply_fan_boost =
+      route_primary_backend(converged,
+                            LCC_CONVERGED_ROUTE_APPLY_FAN_BOOST) != NULL;
   capabilities->has_platform_profile =
       converged->standard_available &&
       converged->standard_capabilities.has_platform_profile;
@@ -484,7 +509,8 @@ static lcc_status_t converged_probe(void *ctx,
   lcc_backend_result_reset(result);
   if (!capabilities->can_read_state && !capabilities->can_apply_profile &&
       !capabilities->can_apply_mode && !capabilities->can_apply_power_limits &&
-      !capabilities->can_apply_fan_table) {
+      !capabilities->can_apply_fan_table &&
+      !capabilities->can_apply_fan_boost) {
     return LCC_ERR_NOT_FOUND;
   }
 
@@ -773,6 +799,52 @@ static lcc_status_t converged_apply_fan_table(void *ctx, const char *table_name,
   return status;
 }
 
+static lcc_status_t converged_apply_fan_boost(void *ctx, bool enabled,
+                                              lcc_backend_result_t *result) {
+  lcc_converged_backend_t *converged = ctx;
+  const lcc_backend_t *primary_backend = NULL;
+  const lcc_backend_t *secondary_backend = NULL;
+  lcc_status_t status = LCC_OK;
+
+  if (converged == NULL) {
+    return LCC_ERR_INVALID_ARGUMENT;
+  }
+
+  primary_backend =
+      route_primary_backend(converged, LCC_CONVERGED_ROUTE_APPLY_FAN_BOOST);
+  if (primary_backend == NULL) {
+    lcc_backend_result_reset(result);
+    lcc_backend_result_set_detail(result,
+                                  "no converged backend can apply fan boost");
+    return LCC_ERR_NOT_SUPPORTED;
+  }
+
+  status = lcc_backend_apply_fan_boost(primary_backend, enabled, result);
+  set_result_executor(result, primary_backend);
+  if (status == LCC_ERR_NOT_SUPPORTED &&
+      (secondary_backend = route_secondary_backend(
+           converged, LCC_CONVERGED_ROUTE_APPLY_FAN_BOOST,
+           primary_backend)) != NULL) {
+    lcc_log_warn("backend route fallback operation=apply_fan_boost from=%s to=%s reason=%s",
+                 lcc_backend_name(primary_backend),
+                 lcc_backend_name(secondary_backend),
+                 lcc_status_string(status));
+    status = lcc_backend_apply_fan_boost(secondary_backend, enabled, result);
+    set_result_executor(result, secondary_backend);
+    if (result != NULL && result->detail[0] == '\0') {
+      set_fallback_detail(result, "apply_fan_boost", primary_backend,
+                          secondary_backend, LCC_ERR_NOT_SUPPORTED);
+    }
+    return status;
+  }
+  if (status == LCC_ERR_NOT_SUPPORTED) {
+    set_fallback_detail(result, "apply_fan_boost", primary_backend, NULL,
+                        status);
+  }
+
+  return status;
+}
+
 const lcc_backend_ops_t lcc_converged_standard_backend_ops = {
     .name = "standard",
     .kind = LCC_BACKEND_STANDARD,
@@ -782,6 +854,7 @@ const lcc_backend_ops_t lcc_converged_standard_backend_ops = {
     .apply_mode = converged_apply_mode,
     .apply_power_limits = converged_apply_power_limits,
     .apply_fan_table = converged_apply_fan_table,
+    .apply_fan_boost = converged_apply_fan_boost,
 };
 
 const lcc_backend_ops_t lcc_converged_amw0_backend_ops = {
@@ -793,6 +866,7 @@ const lcc_backend_ops_t lcc_converged_amw0_backend_ops = {
     .apply_mode = converged_apply_mode,
     .apply_power_limits = converged_apply_power_limits,
     .apply_fan_table = converged_apply_fan_table,
+    .apply_fan_boost = converged_apply_fan_boost,
 };
 
 lcc_status_t lcc_converged_backend_init(

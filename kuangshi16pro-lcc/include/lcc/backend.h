@@ -21,6 +21,7 @@ typedef struct {
   bool can_apply_mode;
   bool can_apply_power_limits;
   bool can_apply_fan_table;
+  bool can_apply_fan_boost;
   bool has_platform_profile;
   bool has_powercap;
   bool needs_reboot_for_mux;
@@ -58,6 +59,8 @@ typedef struct lcc_backend_ops {
                                      lcc_backend_result_t *result);
   lcc_status_t (*apply_fan_table)(void *ctx, const char *table_name,
                                   lcc_backend_result_t *result);
+  lcc_status_t (*apply_fan_boost)(void *ctx, bool enabled,
+                                  lcc_backend_result_t *result);
 } lcc_backend_ops_t;
 
 void lcc_backend_result_reset(lcc_backend_result_t *result);
@@ -81,6 +84,9 @@ lcc_status_t lcc_backend_apply_power_limits(const lcc_backend_t *backend,
                                             lcc_backend_result_t *result);
 lcc_status_t lcc_backend_apply_fan_table(const lcc_backend_t *backend,
                                          const char *table_name,
+                                         lcc_backend_result_t *result);
+lcc_status_t lcc_backend_apply_fan_boost(const lcc_backend_t *backend,
+                                         bool enabled,
                                          lcc_backend_result_t *result);
 void lcc_backend_result_set_stage(lcc_backend_result_t *result,
                                   const char *stage);

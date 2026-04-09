@@ -63,3 +63,38 @@ int lcc_cmd_fan_apply(int argc, char **argv) {
   return lcc_cli_exit_with_status(
       lcc_dbus_apply_fan_table(use_user_bus, table.name));
 }
+
+int lcc_cmd_fan_boost(int argc, char **argv) {
+  const char *value = NULL;
+  bool enabled = false;
+  bool use_user_bus = false;
+  int index = 0;
+
+  for (index = 0; index < argc; ++index) {
+    if (lcc_cli_parse_bus_flag(argv[index], &use_user_bus)) {
+      continue;
+    }
+    if (value == NULL) {
+      value = argv[index];
+      continue;
+    }
+    return lcc_cli_exit_with_status(LCC_ERR_INVALID_ARGUMENT);
+  }
+
+  if (value == NULL) {
+    return lcc_cli_exit_with_status(LCC_ERR_INVALID_ARGUMENT);
+  }
+  if (strcmp(value, "on") == 0 || strcmp(value, "true") == 0 ||
+      strcmp(value, "1") == 0) {
+    enabled = true;
+  } else if (strcmp(value, "off") == 0 || strcmp(value, "false") == 0 ||
+             strcmp(value, "0") == 0) {
+    enabled = false;
+  } else {
+    return lcc_cli_exit_with_status(LCC_ERR_PARSE);
+  }
+
+  (void)printf("fan-boost=%s\n", enabled ? "on" : "off");
+  return lcc_cli_exit_with_status(
+      lcc_dbus_set_fan_boost(use_user_bus, enabled));
+}

@@ -29,9 +29,11 @@ static void test_manager_profile_and_fan_updates(void) {
   assert(lcc_manager_init(&manager, &backend, NULL) == LCC_OK);
   assert(lcc_manager_set_mode(&manager, "turbo") == LCC_OK);
   assert(lcc_manager_apply_fan_table(&manager, "M4T1") == LCC_OK);
+  assert(lcc_manager_set_fan_boost(&manager, true) == LCC_OK);
   assert(lcc_manager_get_state_json(&manager, json, sizeof(json)) == LCC_OK);
   assert(strstr(json, "\"profile\":\"turbo\"") != NULL);
   assert(strstr(json, "\"fan_table\":\"M4T1\"") != NULL);
+  assert(strstr(json, "\"fan_boost\":true") != NULL);
   assert(strstr(json, "\"backend\":\"mock\"") != NULL);
   assert(strstr(json, "\"backend_selected\":\"mock\"") != NULL);
   assert(strstr(json, "\"execution\":{\"read_state\":\"mock\"") != NULL);

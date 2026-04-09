@@ -178,6 +178,19 @@ This file records only findings that are currently explicit enough to rely on.
     older still-running daemon process or pre-r40 service state, not from the
     currently restarted daemon build.
 
+27. Windows reverse evidence and the current Linux-side mode-byte decode agree
+    that OEM `FANBOOST` is bit `0x40` in `ECMG + 0x751`.
+    Local supporting evidence:
+    - `windows-control-center/GCUService_reverse_report.md` records
+      `FanBoost_Mode = 0x40`
+    - the current Linux mode-summary tooling decodes the same bit as
+      `FANBOOST`
+    - the current Linux daemon implementation now exposes this as a dedicated
+      `SetFanBoost` control path, separate from fan-table application
+    What still needs proof:
+    - a hardware validation pass with `FANBOOST = 1` is still needed to confirm
+      the exact thermal/acoustic behavior when the bit is enabled
+
 ## Invalid Or Not Yet Trustworthy
 
 1. Old `WKBC` / `SCMD` send logs produced before the payload-layout fix are not valid evidence for hardware semantics.

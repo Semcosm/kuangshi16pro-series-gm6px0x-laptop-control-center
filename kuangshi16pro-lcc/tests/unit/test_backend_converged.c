@@ -172,6 +172,7 @@ void lcc_run_backend_converged_tests(void) {
   assert(merged_capabilities.can_apply_mode);
   assert(merged_capabilities.can_apply_power_limits);
   assert(merged_capabilities.can_apply_fan_table);
+  assert(merged_capabilities.can_apply_fan_boost);
 
   memset(&state, 0, sizeof(state));
   assert(lcc_backend_read_state(&converged_handle, &state, &result) == LCC_OK);
@@ -181,6 +182,7 @@ void lcc_run_backend_converged_tests(void) {
   assert(strcmp(state.execution.apply_mode, "standard") == 0);
   assert(strcmp(state.execution.apply_power_limits, "standard") == 0);
   assert(strcmp(state.execution.apply_fan_table, "amw0") == 0);
+  assert(strcmp(state.execution.apply_fan_boost, "amw0") == 0);
   assert(strcmp(result.executor_backend, "standard") == 0);
   assert(strstr(state.backend_fallback_reason, "apply_fan_table") != NULL);
   assert(strcmp(state.effective_meta.source, "mixed") == 0);
@@ -302,6 +304,19 @@ void lcc_run_backend_converged_tests(void) {
   assert(strcmp(state.effective.fan_table, "M4T1") == 0);
   assert(strcmp(state.effective.profile, "office") == 0);
   assert(strcmp(state.effective_meta.fan_table.source, "cache") == 0);
+
+  assert(lcc_backend_apply_fan_boost(&converged_handle, true, &result) ==
+         LCC_OK);
+  assert(strcmp(result.executor_backend, "amw0") == 0);
+  assert(!result.hardware_write);
+  assert(strcmp(result.stage, "set-fan-boost") == 0);
+
+  memset(&state, 0, sizeof(state));
+  assert(lcc_backend_read_state(&converged_handle, &state, &result) == LCC_OK);
+  assert(state.effective.has_fan_boost);
+  assert(state.effective.fan_boost_enabled);
+  assert(strcmp(state.effective_meta.fan_boost.source, "cache") == 0);
+  assert(strcmp(state.effective_meta.fan_boost.freshness, "cache") == 0);
 
   (void)snprintf(path, sizeof(path), "%s/firmware/acpi/platform_profile", root);
   assert(unlink(path) == 0);

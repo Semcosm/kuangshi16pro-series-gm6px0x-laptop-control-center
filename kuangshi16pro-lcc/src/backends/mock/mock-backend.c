@@ -241,6 +241,42 @@ static lcc_status_t mock_apply_fan_table(void *ctx, const char *table_name,
   return LCC_OK;
 }
 
+static lcc_status_t mock_apply_fan_boost(void *ctx, bool enabled,
+                                         lcc_backend_result_t *result) {
+  lcc_mock_backend_t *mock = ctx;
+  bool changed = false;
+  lcc_status_t status = LCC_OK;
+
+  if (mock == NULL) {
+    return LCC_ERR_INVALID_ARGUMENT;
+  }
+
+  lcc_backend_result_reset(result);
+  lcc_backend_result_set_executor(result, "mock");
+  status = consume_failure(&mock->fail_fan_boost_status);
+  if (status != LCC_OK) {
+    lcc_backend_result_set_detail(result, "mock apply_fan_boost failed");
+    return status;
+  }
+
+  changed = !mock->state.requested.has_fan_boost ||
+            !mock->state.effective.has_fan_boost ||
+            mock->state.requested.fan_boost_enabled != enabled ||
+            mock->state.effective.fan_boost_enabled != enabled;
+  mock->state.requested.has_fan_boost = true;
+  mock->state.requested.fan_boost_enabled = enabled;
+  mock->state.effective.has_fan_boost = true;
+  mock->state.effective.fan_boost_enabled = enabled;
+
+  if (result != NULL) {
+    result->changed = changed;
+  }
+  (void)lcc_backend_effective_component_set(
+      &mock->state.effective_meta.fan_boost, "mock", "live");
+  lcc_backend_state_finalize_effective_meta(&mock->state);
+  return LCC_OK;
+}
+
 const lcc_backend_ops_t lcc_mock_backend_ops = {
     .name = "mock",
     .kind = LCC_BACKEND_MOCK,
@@ -250,6 +286,7 @@ const lcc_backend_ops_t lcc_mock_backend_ops = {
     .apply_mode = mock_apply_mode,
     .apply_power_limits = mock_apply_power_limits,
     .apply_fan_table = mock_apply_fan_table,
+    .apply_fan_boost = mock_apply_fan_boost,
 };
 
 void lcc_mock_backend_seed_defaults(lcc_mock_backend_t *mock) {
@@ -263,6 +300,7 @@ void lcc_mock_backend_seed_defaults(lcc_mock_backend_t *mock) {
   mock->capabilities.can_apply_mode = true;
   mock->capabilities.can_apply_power_limits = true;
   mock->capabilities.can_apply_fan_table = true;
+  mock->capabilities.can_apply_fan_boost = true;
 
   (void)copy_name(mock->state.backend_name, sizeof(mock->state.backend_name),
                   "mock");
@@ -277,6 +315,10 @@ void lcc_mock_backend_seed_defaults(lcc_mock_backend_t *mock) {
                   sizeof(mock->state.requested.fan_table), "M4T1");
   (void)copy_name(mock->state.effective.fan_table,
                   sizeof(mock->state.effective.fan_table), "M4T1");
+  mock->state.requested.has_fan_boost = true;
+  mock->state.requested.fan_boost_enabled = false;
+  mock->state.effective.has_fan_boost = true;
+  mock->state.effective.fan_boost_enabled = false;
 
   mock->state.requested.has_power_limits = true;
   mock->state.effective.has_power_limits = true;
@@ -303,6 +345,8 @@ void lcc_mock_backend_seed_defaults(lcc_mock_backend_t *mock) {
                                             "mock", "live");
   (void)lcc_backend_effective_component_set(
       &mock->state.effective_meta.fan_table, "mock", "live");
+  (void)lcc_backend_effective_component_set(
+      &mock->state.effective_meta.fan_boost, "mock", "live");
   lcc_backend_effective_power_set_from_limits(&mock->state.effective_meta,
                                               &mock->state.effective.power_limits,
                                               "mock", "live");
@@ -347,5 +391,12 @@ void lcc_mock_backend_fail_next_fan(lcc_mock_backend_t *mock,
                                     lcc_status_t status) {
   if (mock != NULL) {
     mock->fail_fan_status = status;
+  }
+}
+
+void lcc_mock_backend_fail_next_fan_boost(lcc_mock_backend_t *mock,
+                                          lcc_status_t status) {
+  if (mock != NULL) {
+    mock->fail_fan_boost_status = status;
   }
 }

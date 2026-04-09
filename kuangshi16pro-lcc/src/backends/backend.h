@@ -13,6 +13,7 @@ typedef struct {
   lcc_status_t fail_mode_status;
   lcc_status_t fail_power_status;
   lcc_status_t fail_fan_status;
+  lcc_status_t fail_fan_boost_status;
 } lcc_mock_backend_t;
 
 void lcc_mock_backend_seed_defaults(lcc_mock_backend_t *mock);
@@ -26,6 +27,8 @@ void lcc_mock_backend_fail_next_power(lcc_mock_backend_t *mock,
                                       lcc_status_t status);
 void lcc_mock_backend_fail_next_fan(lcc_mock_backend_t *mock,
                                     lcc_status_t status);
+void lcc_mock_backend_fail_next_fan_boost(lcc_mock_backend_t *mock,
+                                          lcc_status_t status);
 
 lcc_status_t lcc_backend_copy_text(char *buffer, size_t buffer_len,
                                    const char *value);
@@ -35,7 +38,8 @@ lcc_status_t lcc_backend_execution_set(lcc_execution_snapshot_t *execution,
                                        const char *apply_profile,
                                        const char *apply_mode,
                                        const char *apply_power_limits,
-                                       const char *apply_fan_table);
+                                       const char *apply_fan_table,
+                                       const char *apply_fan_boost);
 lcc_status_t lcc_backend_execution_set_all(lcc_execution_snapshot_t *execution,
                                            const char *backend_name);
 lcc_status_t lcc_backend_state_set_metadata(
@@ -104,6 +108,8 @@ typedef struct {
   amw0_route_t route;
   size_t fail_after_writes;
   size_t write_count;
+  bool has_shadow_mode_control;
+  uint8_t shadow_mode_control;
   lcc_state_snapshot_t shadow_state;
 } lcc_amw0_backend_t;
 

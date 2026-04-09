@@ -49,7 +49,7 @@ Current CLI scope:
 - `observe`: grouped reads for `mode`, `power`, `fan`, `thermal`, or `all`
   mode and thermal groups also print a decoded summary for the currently observed bytes
 - `developer raw wmbc`: send a traced `WMBC(..., 0x04, buffer)` packet on the direct developer path
-- `mode set`, `power set`, `fan apply`, `profile apply`: pure D-Bus client commands that call `lccd`
+- `mode set`, `power set`, `fan apply`, `fan boost`, `profile apply`: pure D-Bus client commands that call `lccd`
 - `--plan`: print the local staged plan instead of calling D-Bus
 
 Config-driven examples:
@@ -58,6 +58,7 @@ Config-driven examples:
 - `./kuangshi16pro-lcc/build/lccctl profile apply --file kuangshi16pro-lcc/tests/fixtures/demo-profile.ini`
 - `./kuangshi16pro-lcc/build/lccctl state --user-bus`
 - `./kuangshi16pro-lcc/build/lccctl mode set turbo --user-bus`
+- `./kuangshi16pro-lcc/build/lccctl fan boost on --user-bus`
 - `./kuangshi16pro-lcc/build/lccctl developer raw wmbc 0 0x4 0x49 0x00 0x1E 0x00 --dry-run`
 - `./kuangshi16pro-lcc/build/lccctl observe mode`
 - `./kuangshi16pro-lcc/build/lccctl observe all`
@@ -72,7 +73,7 @@ Current phase:
 - `src/daemon/` and `src/dbus/` now build into `lccd`, which exposes the stable
   v1 service surface:
   `GetCapabilities`, `GetState`, `SetMode`, `SetProfile`, `ApplyFanTable`,
-  and `SetPowerLimits` over D-Bus
+  `SetFanBoost`, and `SetPowerLimits` over D-Bus
 - `systemd/` and `dbus/` now carry installable service, activation, system-bus,
   and Polkit policy assets for the deployed daemon path
 - `tests/hardware/run_real_smoke.sh` validates the installed system-bus `lccd`

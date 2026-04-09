@@ -7,6 +7,13 @@
 #include "backends/amw0/ecmg.h"
 #include "lcc/fan.h"
 
+enum {
+  LCC_AMW0_MODE_TURBO_BIT = 0x10u,
+  LCC_AMW0_MODE_HIMODE_BIT = 0x20u,
+  LCC_AMW0_MODE_FANBOOST_BIT = 0x40u,
+  LCC_AMW0_MODE_CUSTOM_BIT = 0x80u,
+};
+
 static lcc_status_t copy_name(char *buffer, size_t buffer_len,
                               const char *value) {
   int written = 0;
@@ -100,17 +107,72 @@ static lcc_operating_mode_t mode_from_control(uint8_t control) {
    * 0x751 is not a pure enum byte. For the first executable path, keep the
    * proven turbo/custom bits and map the observed 0x20 helper family to gaming.
    */
-  if ((control & 0x80u) != 0u) {
+  if ((control & LCC_AMW0_MODE_CUSTOM_BIT) != 0u) {
     return LCC_MODE_CUSTOM;
   }
-  if ((control & 0x10u) != 0u) {
+  if ((control & LCC_AMW0_MODE_TURBO_BIT) != 0u) {
     return LCC_MODE_TURBO;
   }
-  if ((control & 0x20u) != 0u) {
+  if ((control & LCC_AMW0_MODE_HIMODE_BIT) != 0u) {
     return LCC_MODE_GAMING;
   }
 
   return LCC_MODE_OFFICE;
+}
+
+static void set_fan_boost_state(lcc_state_snapshot_t *state, bool enabled) {
+  if (state == NULL) {
+    return;
+  }
+
+  state->requested.has_fan_boost = true;
+  state->requested.fan_boost_enabled = enabled;
+  state->effective.has_fan_boost = true;
+  state->effective.fan_boost_enabled = enabled;
+}
+
+static lcc_operating_mode_t shadow_mode_for_state(
+    const lcc_state_snapshot_t *state) {
+  lcc_operating_mode_t mode = LCC_MODE_OFFICE;
+
+  if (state == NULL) {
+    return LCC_MODE_OFFICE;
+  }
+  if (profile_name_to_mode(state->effective.profile, &mode) == LCC_OK) {
+    return mode;
+  }
+  if (profile_name_to_mode(state->requested.profile, &mode) == LCC_OK) {
+    return mode;
+  }
+
+  return LCC_MODE_OFFICE;
+}
+
+static uint8_t fallback_mode_control(const lcc_amw0_backend_t *amw0) {
+  uint8_t control = 0u;
+
+  if (amw0 == NULL) {
+    return 0u;
+  }
+
+  control = mode_control_for_mode(shadow_mode_for_state(&amw0->shadow_state));
+  if ((amw0->shadow_state.effective.has_fan_boost &&
+       amw0->shadow_state.effective.fan_boost_enabled) ||
+      (amw0->shadow_state.requested.has_fan_boost &&
+       amw0->shadow_state.requested.fan_boost_enabled)) {
+    control = (uint8_t)(control | LCC_AMW0_MODE_FANBOOST_BIT);
+  }
+
+  return control;
+}
+
+static void cache_mode_control(lcc_amw0_backend_t *amw0, uint8_t control) {
+  if (amw0 == NULL) {
+    return;
+  }
+
+  amw0->shadow_mode_control = control;
+  amw0->has_shadow_mode_control = true;
 }
 
 static void seed_shadow_state(lcc_amw0_backend_t *amw0) {
@@ -138,6 +200,8 @@ static void seed_shadow_state(lcc_amw0_backend_t *amw0) {
       &amw0->shadow_state.effective_meta.profile, "cache", "cache");
   (void)lcc_backend_effective_component_set(
       &amw0->shadow_state.effective_meta.fan_table, "cache", "cache");
+  amw0->has_shadow_mode_control = false;
+  amw0->shadow_mode_control = 0u;
   lcc_backend_state_finalize_effective_meta(&amw0->shadow_state);
 }
 
@@ -178,6 +242,25 @@ static lcc_status_t read_live_byte(lcc_amw0_backend_t *amw0, uint16_t offset,
   }
 
   return lcc_amw0_read_ecrr_u8(&amw0->transport, amw0->ecrr_path, offset, value);
+}
+
+static lcc_status_t current_mode_control(lcc_amw0_backend_t *amw0,
+                                         uint8_t *control) {
+  if (amw0 == NULL || control == NULL) {
+    return LCC_ERR_INVALID_ARGUMENT;
+  }
+
+  if (read_live_byte(amw0, LCC_AMW0_ADDR_MODE_CONTROL, control) == LCC_OK) {
+    cache_mode_control(amw0, *control);
+    return LCC_OK;
+  }
+  if (amw0->has_shadow_mode_control) {
+    *control = amw0->shadow_mode_control;
+    return LCC_OK;
+  }
+
+  *control = fallback_mode_control(amw0);
+  return LCC_OK;
 }
 
 static void set_mode_profile_state(lcc_state_snapshot_t *state,
@@ -269,6 +352,7 @@ static lcc_status_t amw0_probe(void *ctx,
   capabilities->can_apply_mode = true;
   capabilities->can_apply_power_limits = true;
   capabilities->can_apply_fan_table = true;
+  capabilities->can_apply_fan_boost = true;
   lcc_backend_result_reset(result);
   lcc_backend_result_set_executor(result, "amw0");
 
@@ -289,6 +373,8 @@ static lcc_status_t amw0_read_state(void *ctx, lcc_state_snapshot_t *state,
   bool any_live_value = false;
   bool profile_live = false;
   bool profile_cache = false;
+  bool fan_boost_live = false;
+  bool fan_boost_cache = false;
   bool power_live[4] = {false, false, false, false};
   bool power_cache[4] = {false, false, false, false};
   bool thermal_live[5] = {false, false, false, false, false};
@@ -306,6 +392,7 @@ static lcc_status_t amw0_read_state(void *ctx, lcc_state_snapshot_t *state,
   (void)lcc_backend_state_set_metadata(state, "amw0", "amw0", NULL,
                                        &amw0->shadow_state.execution);
   profile_cache = state->effective.profile[0] != '\0';
+  fan_boost_cache = state->effective.has_fan_boost;
   power_cache[0] = state->effective.power_limits.pl1.present;
   power_cache[1] = state->effective.power_limits.pl2.present;
   power_cache[2] = state->effective.power_limits.pl4.present;
@@ -321,6 +408,8 @@ static lcc_status_t amw0_read_state(void *ctx, lcc_state_snapshot_t *state,
   if (amw0->transport.dry_run) {
     set_component_from_readback(&state->effective_meta.profile, false,
                                 profile_cache, "amw0");
+    set_component_from_readback(&state->effective_meta.fan_boost, false,
+                                fan_boost_cache, "amw0");
     lcc_backend_effective_power_set_from_limits(
         &state->effective_meta,
         (power_cache[0] || power_cache[1] || power_cache[2] || power_cache[3])
@@ -337,9 +426,13 @@ static lcc_status_t amw0_read_state(void *ctx, lcc_state_snapshot_t *state,
   }
 
   if (read_live_byte(amw0, LCC_AMW0_ADDR_MODE_CONTROL, &raw) == LCC_OK) {
+    cache_mode_control(amw0, raw);
     set_mode_profile_state(state, mode_from_control(raw));
+    set_fan_boost_state(state, (raw & LCC_AMW0_MODE_FANBOOST_BIT) != 0u);
     profile_live = true;
     profile_cache = false;
+    fan_boost_live = true;
+    fan_boost_cache = false;
     any_live_value = true;
   }
   if (read_live_byte(amw0, LCC_AMW0_ADDR_PL1, &raw) == LCC_OK) {
@@ -413,6 +506,8 @@ static lcc_status_t amw0_read_state(void *ctx, lcc_state_snapshot_t *state,
 
   set_component_from_readback(&state->effective_meta.profile, profile_live,
                               profile_cache, "amw0");
+  set_component_from_readback(&state->effective_meta.fan_boost, fan_boost_live,
+                              fan_boost_cache, "amw0");
   lcc_backend_effective_power_clear(&state->effective_meta);
   set_power_field_from_readback(&state->effective_meta, LCC_POWER_FIELD_PL1,
                                 power_live[0], power_cache[0]);
@@ -541,6 +636,8 @@ static lcc_status_t amw0_apply_mode(void *ctx, lcc_operating_mode_t mode,
   lcc_amw0_backend_t *amw0 = ctx;
   const char *profile_name = profile_name_for_mode(mode);
   bool changed = false;
+  uint8_t current_control = 0u;
+  uint8_t target_control = 0u;
   lcc_status_t status = LCC_OK;
 
   if (amw0 == NULL || profile_name == NULL) {
@@ -550,6 +647,15 @@ static lcc_status_t amw0_apply_mode(void *ctx, lcc_operating_mode_t mode,
   lcc_backend_result_reset(result);
   lcc_backend_result_set_executor(result, "amw0");
   changed = strcmp(amw0->shadow_state.effective.profile, profile_name) != 0;
+  status = current_mode_control(amw0, &current_control);
+  if (status != LCC_OK) {
+    lcc_backend_result_set_detail(result, "amw0 mode control readback failed");
+    return status;
+  }
+  target_control = mode_control_for_mode(mode);
+  if ((current_control & LCC_AMW0_MODE_FANBOOST_BIT) != 0u) {
+    target_control = (uint8_t)(target_control | LCC_AMW0_MODE_FANBOOST_BIT);
+  }
   lcc_backend_result_set_stage(result, "set-mode-index");
 
   status = write_ec_byte(amw0, LCC_AMW0_ADDR_MODE_INDEX, mode_index_for_mode(mode));
@@ -558,16 +664,20 @@ static lcc_status_t amw0_apply_mode(void *ctx, lcc_operating_mode_t mode,
     return status;
   }
   lcc_backend_result_set_stage(result, "set-mode-control");
-  status = write_ec_byte(amw0, LCC_AMW0_ADDR_MODE_CONTROL,
-                         mode_control_for_mode(mode));
+  status = write_ec_byte(amw0, LCC_AMW0_ADDR_MODE_CONTROL, target_control);
   if (status != LCC_OK) {
     lcc_backend_result_set_detail(result, "amw0 mode control write failed");
     return status;
   }
 
+  cache_mode_control(amw0, target_control);
   set_mode_profile_state(&amw0->shadow_state, mode);
+  set_fan_boost_state(&amw0->shadow_state,
+                      (target_control & LCC_AMW0_MODE_FANBOOST_BIT) != 0u);
   (void)lcc_backend_effective_component_set(
       &amw0->shadow_state.effective_meta.profile, "cache", "cache");
+  (void)lcc_backend_effective_component_set(
+      &amw0->shadow_state.effective_meta.fan_boost, "cache", "cache");
   lcc_backend_state_finalize_effective_meta(&amw0->shadow_state);
   if (result != NULL) {
     result->changed = changed;
@@ -686,6 +796,54 @@ static lcc_status_t amw0_apply_power_limits(void *ctx,
   return LCC_OK;
 }
 
+static lcc_status_t amw0_apply_fan_boost(void *ctx, bool enabled,
+                                         lcc_backend_result_t *result) {
+  lcc_amw0_backend_t *amw0 = ctx;
+  uint8_t current_control = 0u;
+  uint8_t target_control = 0u;
+  bool changed = false;
+  lcc_status_t status = LCC_OK;
+
+  if (amw0 == NULL) {
+    return LCC_ERR_INVALID_ARGUMENT;
+  }
+
+  lcc_backend_result_reset(result);
+  lcc_backend_result_set_executor(result, "amw0");
+  status = current_mode_control(amw0, &current_control);
+  if (status != LCC_OK) {
+    lcc_backend_result_set_detail(result, "amw0 mode control readback failed");
+    return status;
+  }
+
+  target_control = enabled
+                       ? (uint8_t)(current_control | LCC_AMW0_MODE_FANBOOST_BIT)
+                       : (uint8_t)(current_control & ~LCC_AMW0_MODE_FANBOOST_BIT);
+  changed = !amw0->shadow_state.effective.has_fan_boost ||
+            amw0->shadow_state.effective.fan_boost_enabled != enabled ||
+            current_control != target_control;
+  lcc_backend_result_set_stage(result, "set-fan-boost");
+  status = write_ec_byte(amw0, LCC_AMW0_ADDR_MODE_CONTROL, target_control);
+  if (status != LCC_OK) {
+    lcc_backend_result_set_detail(result, "amw0 fan boost write failed");
+    return status;
+  }
+
+  cache_mode_control(amw0, target_control);
+  set_mode_profile_state(&amw0->shadow_state, mode_from_control(target_control));
+  set_fan_boost_state(&amw0->shadow_state, enabled);
+  (void)lcc_backend_effective_component_set(
+      &amw0->shadow_state.effective_meta.profile, "cache", "cache");
+  (void)lcc_backend_effective_component_set(
+      &amw0->shadow_state.effective_meta.fan_boost, "cache", "cache");
+  lcc_backend_state_finalize_effective_meta(&amw0->shadow_state);
+  if (result != NULL) {
+    result->changed = changed;
+    result->hardware_write = !amw0->transport.dry_run;
+  }
+  return LCC_OK;
+}
+
 static lcc_status_t amw0_apply_fan_table(void *ctx, const char *table_name,
                                          lcc_backend_result_t *result) {
   lcc_amw0_backend_t *amw0 = ctx;
@@ -743,6 +901,7 @@ const lcc_backend_ops_t lcc_amw0_backend_ops = {
     .apply_mode = amw0_apply_mode,
     .apply_power_limits = amw0_apply_power_limits,
     .apply_fan_table = amw0_apply_fan_table,
+    .apply_fan_boost = amw0_apply_fan_boost,
 };
 
 lcc_status_t lcc_amw0_backend_init(lcc_amw0_backend_t *amw0,

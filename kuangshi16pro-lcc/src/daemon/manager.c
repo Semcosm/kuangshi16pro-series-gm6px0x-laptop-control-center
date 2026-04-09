@@ -157,6 +157,15 @@ lcc_status_t lcc_manager_apply_fan_table(lcc_manager_t *manager,
   return lcc_transaction_execute(manager, &request);
 }
 
+lcc_status_t lcc_manager_set_fan_boost(lcc_manager_t *manager, bool enabled) {
+  const lcc_transaction_request_t request = {
+      .kind = LCC_TRANSACTION_FAN_BOOST,
+      .input.fan_boost_enabled = enabled,
+  };
+
+  return lcc_transaction_execute(manager, &request);
+}
+
 lcc_status_t lcc_manager_set_power_limits(lcc_manager_t *manager,
                                           const lcc_power_limits_t *limits) {
   const lcc_transaction_request_t request = {

@@ -72,6 +72,7 @@ static lcc_status_t standard_probe(void *ctx,
   capabilities->can_apply_profile = platform_profile_available;
   capabilities->can_apply_power_limits = powercap_writable;
   capabilities->can_apply_fan_table = false;
+  capabilities->can_apply_fan_boost = false;
   capabilities->needs_reboot_for_mux = false;
 
   if (!capabilities->can_read_state) {
@@ -102,7 +103,7 @@ static lcc_status_t standard_read_state(void *ctx, lcc_state_snapshot_t *state,
     return status;
   }
   status = lcc_backend_execution_set(&execution, "standard", "standard",
-                                     "standard", NULL, NULL);
+                                     "standard", NULL, NULL, NULL);
   if (status != LCC_OK) {
     return status;
   }
@@ -206,6 +207,17 @@ static lcc_status_t standard_apply_fan_table(void *ctx, const char *table_name,
   return LCC_ERR_NOT_SUPPORTED;
 }
 
+static lcc_status_t standard_apply_fan_boost(void *ctx, bool enabled,
+                                             lcc_backend_result_t *result) {
+  (void)ctx;
+  (void)enabled;
+  lcc_backend_result_reset(result);
+  lcc_backend_result_set_executor(result, "standard");
+  lcc_backend_result_set_detail(result,
+                                "standard backend does not support fan boost writes");
+  return LCC_ERR_NOT_SUPPORTED;
+}
+
 const lcc_backend_ops_t lcc_standard_backend_ops = {
     .name = "standard",
     .kind = LCC_BACKEND_STANDARD,
@@ -215,6 +227,7 @@ const lcc_backend_ops_t lcc_standard_backend_ops = {
     .apply_mode = standard_apply_mode,
     .apply_power_limits = standard_apply_power_limits,
     .apply_fan_table = standard_apply_fan_table,
+    .apply_fan_boost = standard_apply_fan_boost,
 };
 
 lcc_status_t lcc_standard_backend_init_at_root(lcc_standard_backend_t *standard,

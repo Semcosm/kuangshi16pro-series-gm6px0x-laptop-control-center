@@ -69,7 +69,8 @@ static void test_state_render_json_includes_last_apply_backend(void) {
                                "amw0 handles apply_fan_table because standard backend does not support them") ==
          LCC_OK);
   assert(lcc_backend_execution_set(&state.execution, "standard", "standard",
-                                   "standard", "amw0", "amw0") == LCC_OK);
+                                   "standard", "amw0", "amw0", "amw0") ==
+         LCC_OK);
   assert(lcc_backend_copy_text(state.requested.profile,
                                sizeof(state.requested.profile),
                                "turbo") == LCC_OK);
@@ -136,7 +137,7 @@ static void test_state_render_json_renders_unknown_power_fields_as_null(void) {
                                sizeof(state.backend_selected),
                                "standard") == LCC_OK);
   assert(lcc_backend_execution_set(&state.execution, "standard", "amw0", "amw0",
-                                   "amw0", "amw0") == LCC_OK);
+                                   "amw0", "amw0", "amw0") == LCC_OK);
   assert(lcc_backend_copy_text(state.requested.profile,
                                sizeof(state.requested.profile),
                                "turbo") == LCC_OK);
@@ -195,7 +196,8 @@ static void test_state_reader_refresh_preserves_diagnostic_snapshots(void) {
                                "amw0 handles apply_power_limits because standard backend does not support them") ==
          LCC_OK);
   assert(lcc_backend_execution_set(&state.execution, "standard", "standard",
-                                   "standard", "amw0", "amw0") == LCC_OK);
+                                   "standard", "amw0", "amw0", "amw0") ==
+         LCC_OK);
   assert(lcc_backend_copy_text(state.last_apply.stage,
                                sizeof(state.last_apply.stage),
                                "write-pl1") == LCC_OK);
@@ -308,10 +310,36 @@ static void test_state_render_json_includes_vendor_fan_level(void) {
   assert(strstr(json, "\"vendor_fan_level\":10") != NULL);
 }
 
+static void test_state_render_json_includes_fan_boost(void) {
+  lcc_state_snapshot_t state;
+  lcc_backend_capabilities_t capabilities;
+  char json[2048];
+
+  memset(&state, 0, sizeof(state));
+  memset(&capabilities, 0, sizeof(capabilities));
+  capabilities.can_read_state = true;
+  capabilities.can_apply_fan_boost = true;
+  state.requested.has_fan_boost = true;
+  state.requested.fan_boost_enabled = true;
+  state.effective.has_fan_boost = true;
+  state.effective.fan_boost_enabled = true;
+  (void)lcc_backend_effective_component_set(&state.effective_meta.fan_boost,
+                                            "amw0", "live");
+  lcc_backend_state_finalize_effective_meta(&state);
+
+  assert(lcc_state_render_json(&state, &capabilities, json, sizeof(json)) ==
+         LCC_OK);
+  assert(strstr(json, "\"apply_fan_boost\":true") != NULL);
+  assert(strstr(json, "\"fan_boost\":true") != NULL);
+  assert(strstr(json, "\"fan_boost\":{\"source\":\"amw0\",\"freshness\":\"live\"}") !=
+         NULL);
+}
+
 void lcc_run_state_model_tests(void) {
   test_state_render_json_includes_last_apply_backend();
   test_state_render_json_renders_unknown_power_fields_as_null();
   test_state_render_json_includes_vendor_fan_level();
+  test_state_render_json_includes_fan_boost();
   test_state_reader_refresh_preserves_diagnostic_snapshots();
   test_state_reader_refresh_marks_cached_values_on_failure();
 }

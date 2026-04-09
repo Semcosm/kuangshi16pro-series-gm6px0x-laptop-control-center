@@ -261,6 +261,43 @@ static lcc_status_t call_string_setter(bool use_user_bus, const char *interface,
   return status;
 }
 
+static lcc_status_t call_boolean_setter(bool use_user_bus, const char *interface,
+                                        const char *method, bool value) {
+  sd_bus *bus = NULL;
+  sd_bus_error error = SD_BUS_ERROR_NULL;
+  sd_bus_message *reply = NULL;
+  lcc_cli_polkit_agent_t agent;
+  lcc_status_t status = LCC_OK;
+  int r = 0;
+
+  if (interface == NULL || method == NULL) {
+    return LCC_ERR_INVALID_ARGUMENT;
+  }
+
+  status = open_bus(use_user_bus, &bus);
+  if (status != LCC_OK) {
+    return status;
+  }
+
+  status = lcc_cli_register_polkit_agent(use_user_bus, &agent);
+  if (status != LCC_OK) {
+    sd_bus_unref(bus);
+    return status;
+  }
+
+  r = sd_bus_call_method(bus, lcc_bus_name, lcc_object_path, interface, method,
+                         &error, &reply, "b", value ? 1 : 0);
+  if (r < 0) {
+    status = dbus_error_to_status(&error, r);
+  }
+
+  lcc_cli_unregister_polkit_agent(&agent);
+  sd_bus_message_unref(reply);
+  sd_bus_error_free(&error);
+  sd_bus_unref(bus);
+  return status;
+}
+
 lcc_status_t lcc_dbus_get_capabilities_json(bool use_user_bus, char *buffer,
                                             size_t buffer_len) {
   return call_string_method(use_user_bus, "io.github.semcosm.Lcc1.Manager",
@@ -286,6 +323,11 @@ lcc_status_t lcc_dbus_set_profile(bool use_user_bus, const char *profile_name) {
 lcc_status_t lcc_dbus_apply_fan_table(bool use_user_bus, const char *table_name) {
   return call_string_setter(use_user_bus, "io.github.semcosm.Lcc1.Fan",
                             "ApplyFanTable", table_name);
+}
+
+lcc_status_t lcc_dbus_set_fan_boost(bool use_user_bus, bool enabled) {
+  return call_boolean_setter(use_user_bus, "io.github.semcosm.Lcc1.Fan",
+                             "SetFanBoost", enabled);
 }
 
 lcc_status_t lcc_dbus_set_power_limits(bool use_user_bus,
