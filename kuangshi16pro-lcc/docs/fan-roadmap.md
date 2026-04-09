@@ -205,11 +205,16 @@ Current status:
   `thermal_cpu_fan_rpm`
   `thermal_gpu_fan_rpm`
   `thermal_vendor_fan_level`
+- normal `fan apply` now programs only the fan-table payload and tail bytes;
+  it no longer enables OEM custom mode or rewrites `profile=custom`
+- built-in pure fan-mode tables now ship as:
+  `fan-quiet`
+  `fan-balanced`
+  `fan-aggressive`
+  `fan-fullspeed`
 - still pending:
-  compare two intentionally different fan tables on the target machine, using
-  the file-based `data/fan-tables/fan-aggressive.json` path when the
-  current active table may already be `fan-balanced`, and pin the expected
-  behavioral delta in documentation
+  prove on hardware that pure table writes still affect fan behavior without
+  changing OEM mode bytes, `TCC`, or package power settings
 
 ### Phase 5: Only then consider live fan-table readback
 

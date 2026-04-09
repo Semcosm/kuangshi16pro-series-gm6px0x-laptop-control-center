@@ -42,13 +42,6 @@ lcc_status_t lcc_build_fan_plan(const lcc_fan_table_t *table,
     return status;
   }
 
-  status = lcc_plan_append_custom_mode(
-      plan, true,
-      "keep custom fan-control path enabled while programming table");
-  if (status != LCC_OK) {
-    return status;
-  }
-
   status = lcc_plan_append_stage(plan, "FanTable_Manager1p5::SetEcFanTable_Cpu");
   if (status != LCC_OK) {
     return status;

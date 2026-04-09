@@ -166,13 +166,13 @@ static void test_amw0_fan_table_dry_run_apply_order(void) {
   memset(&state, 0, sizeof(state));
   assert(lcc_backend_read_state(&backend, &state, &result) == LCC_OK);
   assert(strcmp(state.effective.fan_table, "M4T1") == 0);
-  assert(strcmp(state.effective.profile, "custom") == 0);
+  assert(strcmp(state.effective.profile, "office") == 0);
   assert(strcmp(state.effective_meta.fan_table.source, "cache") == 0);
   assert(strcmp(state.effective_meta.profile.source, "cache") == 0);
 
   read_text_file(trace_path, trace_contents, sizeof(trace_contents));
   assert(strstr(trace_contents, "note=SetFanTableThread -> MyFanTableCtrl::SetFanTable (confirmed call edge)") != NULL);
-  assert(strstr(trace_contents, "note=stage=custom-enable") != NULL);
+  assert(strstr(trace_contents, "note=stage=custom-enable") == NULL);
   assert(strstr(trace_contents, "note=FanTable_Manager1p5::SetEcFanTable_Cpu") != NULL);
   assert(strstr(trace_contents, "note=FanTable_Manager1p5::SetEcFanTable_Gpu") != NULL);
   assert(strstr(trace_contents, "note=FanTable_Manager1p5::FinalizeTailBytes") != NULL);
@@ -227,10 +227,10 @@ static void test_amw0_transaction_dry_run_apply(void) {
   assert(lcc_transaction_execute(&manager, &request) == LCC_OK);
   assert(manager.state_cache.transaction.state == LCC_TRANSACTION_STATE_IDLE);
   assert(strcmp(manager.state_cache.effective.fan_table, "M4T1") == 0);
-  assert(strcmp(manager.state_cache.effective.profile, "custom") == 0);
+  assert(strcmp(manager.state_cache.effective.profile, "turbo") == 0);
   assert(manager.state_cache.last_apply.has_target);
   assert(strcmp(manager.state_cache.last_apply.target.fan_table, "M4T1") == 0);
-  assert(strcmp(manager.state_cache.last_apply.target.profile, "custom") == 0);
+  assert(strcmp(manager.state_cache.last_apply.target.profile, "turbo") == 0);
 }
 
 static void test_amw0_transaction_fan_failure_stage(void) {

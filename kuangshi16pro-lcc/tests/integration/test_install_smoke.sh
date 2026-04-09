@@ -60,8 +60,10 @@ require_file "$stage_root$man1dir/lccctl.1"
 require_file "$stage_root$man8dir/lccd.8"
 require_file "$stage_root$capabilitiesdir/gm6px0x.json"
 require_file "$stage_root$fantablesdir/M4T1.json"
+require_file "$stage_root$fantablesdir/fan-quiet.json"
 require_file "$stage_root$fantablesdir/fan-balanced.json"
 require_file "$stage_root$fantablesdir/fan-aggressive.json"
+require_file "$stage_root$fantablesdir/fan-fullspeed.json"
 require_file "$stage_root$profilesdir/mode4_profile1.json"
 
 grep -Fq "ExecStart=$libexecdir/lccd --system" \

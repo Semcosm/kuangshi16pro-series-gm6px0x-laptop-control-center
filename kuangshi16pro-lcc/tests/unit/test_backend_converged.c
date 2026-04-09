@@ -300,9 +300,8 @@ void lcc_run_backend_converged_tests(void) {
   memset(&state, 0, sizeof(state));
   assert(lcc_backend_read_state(&converged_handle, &state, &result) == LCC_OK);
   assert(strcmp(state.effective.fan_table, "M4T1") == 0);
-  assert(strcmp(state.effective.profile, "custom") == 0);
+  assert(strcmp(state.effective.profile, "office") == 0);
   assert(strcmp(state.effective_meta.fan_table.source, "cache") == 0);
-  assert(strcmp(state.effective_meta.profile.source, "cache") == 0);
 
   (void)snprintf(path, sizeof(path), "%s/firmware/acpi/platform_profile", root);
   assert(unlink(path) == 0);

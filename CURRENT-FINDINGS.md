@@ -1,4 +1,4 @@
-# Current Findings (2026-04-05)
+# Current Findings (2026-04-09)
 
 This file records only findings that are currently explicit enough to rely on.
 
@@ -117,6 +117,67 @@ This file records only findings that are currently explicit enough to rely on.
 22. `LDAT` / `HDAT` / `CMDL` / `CMDH` remained latched after the call in the observed traces.
     That means the EC-facing command bytes persist long enough to inspect after a successful `WKBC` send.
 
+23. The OEM performance button changes real hardware power/thermal behavior beyond
+    what the current Linux daemon state model fully explains.
+    Local proof:
+    - with `PL1/PL2 = 140/140`, one observed state stayed near `45 W` with
+      `MSR_IA32_TEMPERATURE_TARGET = 80 C` (`100 default - 20 offset`)
+    - after switching with the vendor button, the same Linux-side `PL1/PL2`
+      setting produced about `130 W` package power with
+      `MSR_IA32_TEMPERATURE_TARGET = 95 C` (`100 default - 5 offset`)
+    This means the OEM mode path changes more than Linux `powercap` alone; it
+    likely selects a different EC/WMI-backed mode family or helper-bit
+    combination.
+
+24. A pre-restart Linux fan-table application path was observed changing the
+    core OEM mode-control byte `ECMG + 0x751`, so that older live daemon path
+    was not a "pure fan-table only" path.
+    Local proof from a re-apply of `fan-quiet` while the machine was already in
+    the vendor "benchmark / frenzy" family, before the later service restart
+    and trace-enabled retest:
+    - before: `MAFAN_CTL = 0x30`
+      (`TBME = 1`, `HIMODE = 1`, `UFME = 0`)
+    - after: `MAFAN_CTL = 0xA0`
+      (`TBME = 0`, `HIMODE = 1`, `UFME = 1`)
+    At the same time:
+    - `TAIL1/TAIL2/TAILCTL` stayed `0x01 / 0x01 / 0x03`
+    - `PL1 / PL2 / TCC` stayed unchanged
+    This proved that the earlier live daemon path was not explained by the
+    observed fan-tail bytes alone; something in that running path moved the
+    main mode-control family when the fan table was applied.
+
+25. Synthetic `WKBC1` fan-table writes still do not reproduce the
+    `0x751 -> 0xA0` mode flip seen during real `lccctl fan apply`.
+    Local proof:
+    - single-point and whole-table same-value `WKBC1` writes left
+      `MAFAN_CTL = 0x30`
+    - whole-table `WKBC1` writes with materially different target values from
+      `fan-fullspeed.json` and `fan-quiet.json` also left `MAFAN_CTL = 0x30`
+    - the only observed changes in those synthetic runs were transient `FFAN`
+      movement and the raw fan-table bytes themselves
+    This rules out several simpler explanations:
+    - not "touching 0xF00..0xF5F" by itself
+    - not `WKBC1` as a transport by itself
+    - not the full fan-table byte sequence by itself
+    The remaining highest-value hypothesis is that the live `lccd` daemon path
+    is still doing something beyond the synthetic `WKBC1` replay, or that the
+    running daemon process was not restarted after the newer package build.
+
+26. After restarting `lccd.service` into the newer trace-enabled build on
+    2026-04-09 17:43 CST, a real system-bus `lccctl fan apply --file
+    fan-quiet.json` no longer changed `ECMG + 0x751`.
+    Local proof:
+    - before real apply: `MAFAN_CTL = 0x30`
+    - after real apply: `MAFAN_CTL = 0x30`
+    - `requested/effective.profile` stayed `turbo`
+    - `requested/effective.fan_table` changed from `system-default` to
+      `fan-quiet`
+    - `last_apply_backend = amw0`
+    - `last_apply_stage = FanTable_Manager1p5::FinalizeTailBytes`
+    This strongly suggests the earlier `0x30 -> 0xA0` observation came from an
+    older still-running daemon process or pre-r40 service state, not from the
+    currently restarted daemon build.
+
 ## Invalid Or Not Yet Trustworthy
 
 1. Old `WKBC` / `SCMD` send logs produced before the payload-layout fix are not valid evidence for hardware semantics.
@@ -142,7 +203,8 @@ This file records only findings that are currently explicit enough to rely on.
 
 2. Verify whether `ECON` is actually `One` on this Linux setup when `AMW0` methods are called.
 
-3. Observe the `ECMG` fan fields during real mode changes, hotkeys, or load changes now that an AML-backed read path is available.
+3. Observe the `ECMG` fan fields and mode bytes during real mode changes,
+   hotkeys, or load changes now that an AML-backed read path is available.
 
 ## Pointers
 
@@ -156,3 +218,4 @@ This file records only findings that are currently explicit enough to rely on.
 - `scripts/amw0/amw0-wmbc-trace.sh`
 - `scripts/amw0/amw0-monitor-trace.sh`
 - `scripts/amw0/amw0-ecmg-read.sh`
+- `scripts/amw0/amw0-mode-button-audit.sh`

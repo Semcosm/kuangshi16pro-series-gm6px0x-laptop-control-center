@@ -53,19 +53,18 @@ static void test_fan_plan(void) {
   assert(lcc_fan_table_build_demo(&table, "demo") == LCC_OK);
   assert(lcc_validate_fan_table(&table) == LCC_OK);
   assert(lcc_build_fan_plan(&table, &plan) == LCC_OK);
-  assert(plan.count == 101u);
+  assert(plan.count == 100u);
   assert(plan.actions[0].kind == LCC_ACTION_STAGE);
-  assert(plan.actions[1].kind == LCC_ACTION_CUSTOM_MODE);
-  assert(plan.actions[2].kind == LCC_ACTION_STAGE);
-  assert(plan.actions[3].addr == 0x0F00u);
-  assert(plan.actions[18].addr == 0x0F0Fu);
-  assert(plan.actions[19].addr == 0x0F10u);
-  assert(plan.actions[51].kind == LCC_ACTION_STAGE);
-  assert(plan.actions[96].addr == 0x0F5Cu);
-  assert(plan.actions[97].kind == LCC_ACTION_STAGE);
-  assert(plan.actions[98].addr == 0x0F5Du);
-  assert(plan.actions[99].addr == 0x0F5Eu);
-  assert(plan.actions[100].addr == 0x0F5Fu);
+  assert(plan.actions[1].kind == LCC_ACTION_STAGE);
+  assert(plan.actions[2].addr == 0x0F00u);
+  assert(plan.actions[17].addr == 0x0F0Fu);
+  assert(plan.actions[18].addr == 0x0F10u);
+  assert(plan.actions[50].kind == LCC_ACTION_STAGE);
+  assert(plan.actions[95].addr == 0x0F5Cu);
+  assert(plan.actions[96].kind == LCC_ACTION_STAGE);
+  assert(plan.actions[97].addr == 0x0F5Du);
+  assert(plan.actions[98].addr == 0x0F5Eu);
+  assert(plan.actions[99].addr == 0x0F5Fu);
 }
 
 static void test_amw0_expr_format(void) {
@@ -99,7 +98,7 @@ static void test_profile_document_load(void) {
   assert(document.fan_table.cpu[0].up_temp == 40u);
   assert(document.fan_table.gpu[15].duty == 95u);
   assert(lcc_build_profile_plan(&document, &plan) == LCC_OK);
-  assert(plan.count == 111u);
+  assert(plan.count == 110u);
 }
 
 static void test_fan_table_json_fixture_load(void) {
@@ -116,9 +115,28 @@ static void test_fan_table_json_fixture_load(void) {
   assert(table.cpu[15].up_temp == table.cpu[2].up_temp);
   assert(table.gpu[15].duty == table.gpu[2].duty);
   assert(lcc_build_fan_plan(&table, &plan) == LCC_OK);
+  assert(plan.actions[97].value == 0x01u);
   assert(plan.actions[98].value == 0x01u);
-  assert(plan.actions[99].value == 0x01u);
-  assert(plan.actions[100].value == 0x03u);
+  assert(plan.actions[99].value == 0x03u);
+}
+
+static void test_builtin_fan_tables_load(void) {
+  lcc_fan_table_t quiet;
+  lcc_fan_table_t fullspeed;
+
+  assert(lcc_fan_table_load_file("data/fan-tables/fan-quiet.json", &quiet) ==
+         LCC_OK);
+  assert(strcmp(quiet.name, "fan-quiet") == 0);
+  assert(quiet.cpu[0].up_temp == 45u);
+  assert(quiet.gpu[7].duty == 54u);
+
+  assert(lcc_fan_table_load_file("data/fan-tables/fan-fullspeed.json",
+                                 &fullspeed) == LCC_OK);
+  assert(strcmp(fullspeed.name, "fan-fullspeed") == 0);
+  assert(fullspeed.cpu[0].duty == 100u);
+  assert(fullspeed.gpu[0].duty == 100u);
+  assert(fullspeed.cpu[15].duty == 100u);
+  assert(fullspeed.gpu[15].duty == 100u);
 }
 
 int main(void) {
@@ -128,6 +146,7 @@ int main(void) {
   test_amw0_expr_format();
   test_profile_document_load();
   test_fan_table_json_fixture_load();
+  test_builtin_fan_tables_load();
   lcc_run_backend_mock_tests();
   lcc_run_backend_amw0_tests();
   lcc_run_backend_converged_tests();

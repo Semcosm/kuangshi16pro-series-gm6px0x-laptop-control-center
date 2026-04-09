@@ -282,6 +282,11 @@ Interpretation rules:
 - when the active table may already be `fan-balanced`, prefer
   `data/fan-tables/fan-aggressive.json` for compare mode so the A/B
   window uses intentionally different fan curves
+- for pure fan-mode validation, also capture:
+  `MSR_IA32_TEMPERATURE_TARGET`
+  package power limits
+  any known OEM mode bytes
+  and reject the result if those change while only `fan apply` was requested
 
 The hardware smoke summary also records:
 

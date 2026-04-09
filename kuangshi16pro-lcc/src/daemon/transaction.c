@@ -52,29 +52,6 @@ static void merge_optional_byte(lcc_optional_byte_t *target,
   }
 }
 
-static void sync_fan_transaction_profile(lcc_state_target_t *target,
-                                         const lcc_state_snapshot_t *state) {
-  const char *profile_name = NULL;
-
-  if (target == NULL || state == NULL) {
-    return;
-  }
-  if (target->fan_table[0] == '\0' || state->requested.fan_table[0] == '\0') {
-    return;
-  }
-  if (strcmp(target->fan_table, state->requested.fan_table) != 0) {
-    return;
-  }
-
-  profile_name = state->requested.profile[0] != '\0' ? state->requested.profile
-                                                      : state->effective.profile;
-  if (profile_name == NULL || profile_name[0] == '\0') {
-    return;
-  }
-
-  (void)copy_name(target->profile, sizeof(target->profile), profile_name);
-}
-
 static lcc_status_t mode_to_profile_name(const char *mode_name,
                                          const char **profile_name,
                                          lcc_operating_mode_t *mode) {
@@ -700,11 +677,6 @@ lcc_status_t lcc_transaction_execute(lcc_manager_t *manager,
                           result.executor_backend, &pending_target, status,
                           detail);
     return status;
-  }
-
-  if (request->kind == LCC_TRANSACTION_FAN_TABLE) {
-    sync_fan_transaction_profile(&pending_target, &manager->state_cache);
-    last_apply_set_target(manager, &pending_target);
   }
 
   if (result.hardware_write) {

@@ -724,14 +724,6 @@ static lcc_status_t amw0_apply_fan_table(void *ctx, const char *table_name,
                   sizeof(amw0->shadow_state.requested.fan_table), table.name);
   (void)copy_name(amw0->shadow_state.effective.fan_table,
                   sizeof(amw0->shadow_state.effective.fan_table), table.name);
-  if (table.activated) {
-    (void)copy_name(amw0->shadow_state.requested.profile,
-                    sizeof(amw0->shadow_state.requested.profile), "custom");
-    (void)copy_name(amw0->shadow_state.effective.profile,
-                    sizeof(amw0->shadow_state.effective.profile), "custom");
-    (void)lcc_backend_effective_component_set(
-        &amw0->shadow_state.effective_meta.profile, "cache", "cache");
-  }
   (void)lcc_backend_effective_component_set(
       &amw0->shadow_state.effective_meta.fan_table, "cache", "cache");
   lcc_backend_state_finalize_effective_meta(&amw0->shadow_state);
